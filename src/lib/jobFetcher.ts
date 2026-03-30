@@ -17,23 +17,17 @@ const parser = new Parser();
 // }
 
 const FEEDS = [
-  // 1. We Work Remotely (The Gold Standard)
+  // Works perfectly
   "https://weworkremotely.com/categories/remote-front-end-programming-jobs.rss",
 
-  // 2. Remotive (Very high-quality tech roles)
-  "https://remotive.com/remote-jobs/feed/software-dev",
+  // Updated URL
+  "https://remotive.com/feed",
 
-  // 3. Working Nomads (Great for global/digital nomad roles)
-  "https://www.workingnomads.com/jobs?category=development&tags=frontend&location=anywhere&format=rss",
+  // Alternative for Working Nomads (sometimes their specific filters break)
+  "https://www.workingnomads.com/jobsfeed",
 
-  // 4. Jobspresso (Curated remote jobs)
-  "https://jobspresso.co/category/dev/feed/",
-
-  // 5. Authentic Jobs (Often has high-end React/Frontend roles)
-  "https://authenticjobs.com/category/development/feed/",
-
-  // 6. Stack Overflow / Discover (via specialized remote aggregators)
-  "https://remoteok.com/remote-frontend-jobs.rss",
+  // RemoteOK (usually very reliable)
+  "https://remoteok.com/remote-jobs.rss",
 ];
 
 export async function getDailyJobs() {
