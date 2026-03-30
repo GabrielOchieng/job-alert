@@ -38,20 +38,44 @@ const FEEDS = [
 
 export async function getDailyJobs() {
   const allJobs = [];
+  const lookbackDate = new Date();
+  lookbackDate.setDate(lookbackDate.getDate() - 2); // 2 days lookback
 
   for (const url of FEEDS) {
-    const feed = await parser.parseURL(url);
-    allJobs.push(...feed.items);
+    try {
+      console.log(`Fetching: ${url}`);
+      // Set a timeout for each request so one slow site doesn't kill the whole app
+      const feed = await parser.parseURL(url);
+
+      if (feed.items) {
+        allJobs.push(...feed.items);
+      }
+    } catch (error) {
+      // If one feed fails, we log it but DON'T stop the loop
+      console.error(`Failed to fetch ${url}:`, error);
+    }
   }
 
-  const lookbackDate = new Date();
-  lookbackDate.setDate(lookbackDate.getDate() - 2);
+  console.log(`Total raw items found: ${allJobs.length}`);
 
-  return allJobs.filter((item) => {
-    const pubDate = new Date(item.pubDate || "");
-    // Filter for date AND ensure 'frontend' is in the title
-    return (
-      pubDate >= lookbackDate && item.title?.toLowerCase().includes("frontend")
-    );
+  const filteredJobs = allJobs.filter((item) => {
+    const pubDate = new Date(item.pubDate || item.isoDate || "");
+    const title = item.title?.toLowerCase() || "";
+
+    const isNewEnough = pubDate >= lookbackDate;
+    const isFrontend =
+      title.includes("frontend") ||
+      title.includes("react") ||
+      title.includes("typescript");
+
+    return isNewEnough && isFrontend;
   });
+
+  // Deduplicate: Sometimes the same job is on multiple boards
+  const uniqueJobs = Array.from(
+    new Map(filteredJobs.map((item) => [item.link, item])).values(),
+  );
+
+  console.log(`Final filtered jobs: ${uniqueJobs.length}`);
+  return uniqueJobs;
 }
