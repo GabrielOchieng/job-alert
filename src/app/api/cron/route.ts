@@ -13,8 +13,10 @@ export async function GET(request: Request) {
 
   try {
     const jobs = await getDailyJobs();
+    console.log(`Found ${jobs.length} jobs.`); // This will show up in Vercel logs
 
     if (jobs.length === 0) {
+      console.log("Skipping email because job list is empty.");
       return NextResponse.json({ message: "No new jobs today." });
     }
 
