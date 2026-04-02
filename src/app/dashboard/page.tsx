@@ -1,36 +1,23 @@
-import { supabase } from "@/lib/supabase";
-import JobCard from "@/components/JobCard";
-import { Input } from "@/components/ui/input";
+import { ModeToggle } from "@/components/ModeToggle";
+import JobFeed from "./JobFeed";
 
-export default async function Dashboard() {
-  const { data: jobs } = await supabase
-    .from("jobs")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(50);
-
+export default function Dashboard() {
   return (
-    <div className="min-h-screen bg-slate-50/50 p-6 md:p-12">
-      <div className="max-w-5xl mx-auto">
-        <header className="flex justify-between items-end mb-12">
+    <div className="min-h-screen bg-background transition-colors duration-300">
+      <div className="max-w-5xl mx-auto p-6 md:p-12">
+        <header className="flex justify-between items-center mb-12">
           <div>
-            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-4xl font-extrabold text-foreground tracking-tight">
               Command Center
             </h1>
-            <p className="text-slate-500 mt-2 text-lg">
-              Managing {jobs?.length} latest opportunities.
+            <p className="text-muted-foreground mt-1 text-lg">
+              Automated Job Intelligence
             </p>
           </div>
-          <div className="w-72">
-            <Input placeholder="Search companies..." className="bg-white" />
-          </div>
+          <ModeToggle />
         </header>
 
-        <div className="grid gap-6">
-          {jobs?.map((job) => (
-            <JobCard key={job.id} job={job} />
-          ))}
-        </div>
+        <JobFeed />
       </div>
     </div>
   );
