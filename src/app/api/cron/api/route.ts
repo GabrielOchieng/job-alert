@@ -1,16 +1,8 @@
 // import { NextResponse } from "next/server";
 // import { Resend } from "resend";
+// import { filterNewJobs } from "@/lib/supabase"; // Make sure this path matches your file structure
 
 // const resend = new Resend(process.env.RESEND_API_KEY);
-
-// // const SEARCH_QUERIES = [
-// //   "frontend developer remote",
-// //   "react engineer worldwide",
-// //   "nextjs developer remote",
-// //   "typescript developer global",
-// //   "ui engineer remote",
-// //   "web developer remote global",
-// // ];
 
 // const SEARCH_QUERIES = [
 //   "react engineer remote global",
@@ -22,6 +14,7 @@
 // ];
 
 // export async function GET(request: Request) {
+//   // Security Check
 //   const authHeader = request.headers.get("authorization");
 //   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
 //     return new Response("Unauthorized", { status: 401 });
@@ -29,7 +22,7 @@
 
 //   let allJobs: any[] = [];
 
-//   // We loop through multiple queries and request 2 pages each to get massive volume
+//   // 1. Fetch from JSearch with Pagination
 //   const apiPromises = SEARCH_QUERIES.map(async (query) => {
 //     try {
 //       const res = await fetch(
@@ -44,6 +37,7 @@
 //       const data = await res.json();
 //       return data.data || [];
 //     } catch (e) {
+//       console.error(`JSearch Error for ${query}:`, e);
 //       return [];
 //     }
 //   });
@@ -51,23 +45,7 @@
 //   const results = await Promise.all(apiPromises);
 //   results.forEach((group) => allJobs.push(...group));
 
-//   // Deduplicate and map
-//   //   const uniqueJobs = Array.from(
-//   //     new Map(
-//   //       allJobs.map((j: any) => [
-//   //         j.job_apply_link,
-//   //         {
-//   //           title: j.job_title,
-//   //           company: j.employer_name,
-//   //           url: j.job_apply_link,
-//   //           isDirect:
-//   //             j.job_apply_link.includes("lever.co") ||
-//   //             j.job_apply_link.includes("greenhouse.io"),
-//   //         },
-//   //       ]),
-//   //     ).values(),
-//   //   );
-
+//   // 2. Deduplicate and Map to our internal format
 //   const uniqueJobs = Array.from(
 //     new Map(
 //       allJobs.map((j: any) => [
@@ -76,7 +54,7 @@
 //           title: j.job_title,
 //           company: j.employer_name,
 //           url: j.job_apply_link,
-//           // Detect 'Direct' ATS links
+//           // Detect 'Direct' ATS links (Lever, Greenhouse, Workable, Ashby)
 //           isDirect: /lever\.co|greenhouse\.io|workable\.com|ashbyhq\.com/.test(
 //             j.job_apply_link.toLowerCase(),
 //           ),
@@ -85,38 +63,52 @@
 //     ).values(),
 //   );
 
-//   if (uniqueJobs.length > 0) {
-//     // Sort so Direct applications are at the top
-//     // const sorted = uniqueJobs.sort(
-//     //   (a: any, b: any) => (b.isDirect ? 1 : 0) - (a.isDirect ? 1 : 0),
-//     // );
+//   // 3. THE MAGIC: Filter only the jobs we haven't sent before
+//   const newJobs = await filterNewJobs(uniqueJobs);
 
-//     const sorted = uniqueJobs.sort((a: any, b: any) => (b.isDirect ? 1 : -1));
+//   console.log(
+//     `Aggregator: ${uniqueJobs.length} found. ${newJobs.length} are new.`,
+//   );
+
+//   // 4. Send Email only if there are fresh leads
+//   if (newJobs.length > 0) {
+//     // Sort so Direct applications are at the top for the email
+//     const sorted = newJobs.sort((a: any, b: any) => (b.isDirect ? 1 : -1));
 
 //     await resend.emails.send({
 //       from: "JobBot <onboarding@resend.dev>",
 //       to: process.env.MY_EMAIL!,
-//       subject: `🌍 ${sorted.length} Global Aggregator Jobs Found`,
-//       html: sorted
-//         .map(
-//           (j: any) => `
-//         <p>
-//           ${j.isDirect ? "⭐ <strong>DIRECT APPLY:</strong> " : ""}
-//           <strong>${j.title}</strong> @ ${j.company}<br>
-//           <a href="${j.url}">Apply Now</a>
-//         </p>
+//       subject: `🌍 ${sorted.length} NEW Global Jobs Found`,
+//       html: `
+//         <div style="font-family: sans-serif; max-width: 600px;">
+//           <h2>Fresh Remote Leads</h2>
+//           <p>The following jobs were just posted and haven't been sent to you before.</p>
+//           <hr />
+//           ${sorted
+//             .map(
+//               (j: any) => `
+//             <div style="margin-bottom: 20px;">
+//               ${j.isDirect ? "⭐ <strong style='color: #059669;'>DIRECT APPLY</strong><br>" : ""}
+//               <strong style="font-size: 1.1em;">${j.title}</strong> @ ${j.company}<br>
+//               <a href="${j.url}" style="color: #2563eb; text-decoration: none;">Apply Now →</a>
+//             </div>
+//           `,
+//             )
+//             .join("")}
+//         </div>
 //       `,
-//         )
-//         .join(""),
 //     });
 //   }
 
-//   return NextResponse.json({ found: uniqueJobs.length });
+//   return NextResponse.json({
+//     total_found: uniqueJobs.length,
+//     new_sent: newJobs.length,
+//   });
 // }
 
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { filterNewJobs } from "@/lib/supabase"; // Make sure this path matches your file structure
+import { filterNewJobs } from "@/lib/supabase";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -130,7 +122,6 @@ const SEARCH_QUERIES = [
 ];
 
 export async function GET(request: Request) {
-  // Security Check
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response("Unauthorized", { status: 401 });
@@ -138,7 +129,6 @@ export async function GET(request: Request) {
 
   let allJobs: any[] = [];
 
-  // 1. Fetch from JSearch with Pagination
   const apiPromises = SEARCH_QUERIES.map(async (query) => {
     try {
       const res = await fetch(
@@ -161,7 +151,6 @@ export async function GET(request: Request) {
   const results = await Promise.all(apiPromises);
   results.forEach((group) => allJobs.push(...group));
 
-  // 2. Deduplicate and Map to our internal format
   const uniqueJobs = Array.from(
     new Map(
       allJobs.map((j: any) => [
@@ -170,7 +159,6 @@ export async function GET(request: Request) {
           title: j.job_title,
           company: j.employer_name,
           url: j.job_apply_link,
-          // Detect 'Direct' ATS links (Lever, Greenhouse, Workable, Ashby)
           isDirect: /lever\.co|greenhouse\.io|workable\.com|ashbyhq\.com/.test(
             j.job_apply_link.toLowerCase(),
           ),
@@ -179,16 +167,14 @@ export async function GET(request: Request) {
     ).values(),
   );
 
-  // 3. THE MAGIC: Filter only the jobs we haven't sent before
+  // Filter against DB and save new ones with full metadata
   const newJobs = await filterNewJobs(uniqueJobs);
 
   console.log(
     `Aggregator: ${uniqueJobs.length} found. ${newJobs.length} are new.`,
   );
 
-  // 4. Send Email only if there are fresh leads
   if (newJobs.length > 0) {
-    // Sort so Direct applications are at the top for the email
     const sorted = newJobs.sort((a: any, b: any) => (b.isDirect ? 1 : -1));
 
     await resend.emails.send({
@@ -198,7 +184,6 @@ export async function GET(request: Request) {
       html: `
         <div style="font-family: sans-serif; max-width: 600px;">
           <h2>Fresh Remote Leads</h2>
-          <p>The following jobs were just posted and haven't been sent to you before.</p>
           <hr />
           ${sorted
             .map(
