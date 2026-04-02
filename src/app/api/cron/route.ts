@@ -21,21 +21,38 @@ export async function GET(request: Request) {
     }
 
     // 2. Format the email body
+    // const emailHtml = `
+    //   <h1>🚀 New Remote Frontend Jobs</h1>
+    //   <ul>
+    //     ${jobs
+    //       .map(
+    //         (job) => `
+    //       <li>
+    //         <strong>${job.title}</strong><br/>
+    //         <a href="${job.link}">View Job Posting</a>
+    //       </li>
+    //     `,
+    //       )
+    //       .join("")}
+    //   </ul>
+    // `;
+
     const emailHtml = `
-      <h1>🚀 New Remote Frontend Jobs</h1>
-      <ul>
-        ${jobs
-          .map(
-            (job) => `
-          <li>
-            <strong>${job.title}</strong><br/>
-            <a href="${job.link}">View Job Posting</a>
-          </li>
-        `,
-          )
-          .join("")}
-      </ul>
-    `;
+  <h2>🚀 ${jobs.length} New Leads Found</h2>
+  <p>I've aggregated these from LinkedIn, Indeed, and top remote boards.</p>
+  <hr/>
+  ${jobs
+    .map(
+      (job) => `
+    <div style="margin-bottom: 20px;">
+      <h3 style="margin:0;">${job.title}</h3>
+      <p style="margin:5px 0;">🏢 ${job.company}</p>
+      <a href="${job.url}" style="color: #0070f3;">View & Apply →</a>
+    </div>
+  `,
+    )
+    .join("")}
+`;
 
     // 3. Send via Resend
     await resend.emails.send({
