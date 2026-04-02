@@ -17,59 +17,103 @@ const parser = new Parser();
 // }
 
 const FEEDS = [
-  // Works perfectly
+  // This one is very reliable
   "https://weworkremotely.com/categories/remote-front-end-programming-jobs.rss",
 
-  // Updated URL
-  "https://remotive.com/feed",
+  // New Remotive Feed URL
+  "https://remotive.com/remote-jobs/feed",
 
-  // Alternative for Working Nomads (sometimes their specific filters break)
-  "https://www.workingnomads.com/jobsfeed",
-
-  // RemoteOK (usually very reliable)
+  // Broadened RemoteOK Feed
   "https://remoteok.com/remote-jobs.rss",
+
+  // Fresh Feed for JS/Frontend roles
+  "https://jsremotely.com/remote-jobs.rss",
 ];
+
+// export async function getDailyJobs() {
+//   const allJobs = [];
+//   const lookbackDate = new Date();
+//   lookbackDate.setDate(lookbackDate.getDate() - 2); // 2 days lookback
+
+//   for (const url of FEEDS) {
+//     try {
+//       console.log(`Fetching: ${url}`);
+//       // Set a timeout for each request so one slow site doesn't kill the whole app
+//       const feed = await parser.parseURL(url);
+
+//       if (feed.items) {
+//         allJobs.push(...feed.items);
+//       }
+//     } catch (error) {
+//       // If one feed fails, we log it but DON'T stop the loop
+//       console.error(`Failed to fetch ${url}:`, error);
+//     }
+//   }
+
+//   console.log(`Total raw items found: ${allJobs.length}`);
+
+//   const filteredJobs = allJobs.filter((item) => {
+//     const pubDate = new Date(item.pubDate || item.isoDate || "");
+//     const title = item.title?.toLowerCase() || "";
+
+//     const isNewEnough = pubDate >= lookbackDate;
+//     const isFrontend =
+//       title.includes("frontend") ||
+//       title.includes("react") ||
+//       title.includes("typescript");
+
+//     return isNewEnough && isFrontend;
+//   });
+
+//   // Deduplicate: Sometimes the same job is on multiple boards
+//   const uniqueJobs = Array.from(
+//     new Map(filteredJobs.map((item) => [item.link, item])).values(),
+//   );
+
+//   console.log(`Final filtered jobs: ${uniqueJobs.length}`);
+//   return uniqueJobs;
+// }
 
 export async function getDailyJobs() {
   const allJobs = [];
   const lookbackDate = new Date();
-  lookbackDate.setDate(lookbackDate.getDate() - 2); // 2 days lookback
+  lookbackDate.setDate(lookbackDate.getDate() - 5); // Increased to 5 days for robustness
 
   for (const url of FEEDS) {
     try {
       console.log(`Fetching: ${url}`);
-      // Set a timeout for each request so one slow site doesn't kill the whole app
       const feed = await parser.parseURL(url);
-
-      if (feed.items) {
-        allJobs.push(...feed.items);
-      }
+      if (feed.items) allJobs.push(...feed.items);
     } catch (error) {
-      // If one feed fails, we log it but DON'T stop the loop
-      console.error(`Failed to fetch ${url}:`, error);
+      console.error(`Failed to fetch ${url}. Moving on...`);
     }
   }
-
-  console.log(`Total raw items found: ${allJobs.length}`);
 
   const filteredJobs = allJobs.filter((item) => {
     const pubDate = new Date(item.pubDate || item.isoDate || "");
     const title = item.title?.toLowerCase() || "";
 
-    const isNewEnough = pubDate >= lookbackDate;
-    const isFrontend =
-      title.includes("frontend") ||
-      title.includes("react") ||
-      title.includes("typescript");
+    // We want Frontend OR React OR Next.js OR Senior/Lead roles
+    const keywords = [
+      "frontend",
+      "front-end",
+      "react",
+      "typescript",
+      "next.js",
+      "nextjs",
+      "javascript",
+    ];
+    const hasKeyword = keywords.some((key) => title.includes(key));
 
-    return isNewEnough && isFrontend;
+    return pubDate >= lookbackDate && hasKeyword;
   });
 
-  // Deduplicate: Sometimes the same job is on multiple boards
+  // Log the titles of filtered jobs to the Vercel console for debugging
+  filteredJobs.forEach((j) => console.log(`Matched: ${j.title}`));
+
   const uniqueJobs = Array.from(
     new Map(filteredJobs.map((item) => [item.link, item])).values(),
   );
 
-  console.log(`Final filtered jobs: ${uniqueJobs.length}`);
   return uniqueJobs;
 }
