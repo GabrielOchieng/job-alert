@@ -121,7 +121,6 @@ const FEEDS = [
   "https://remoteok.com/remote-jobs.rss",
   "https://himalayas.app/jobs/frontend/rss", // Correct 2026 RSS path
   "https://nodesk.co/remote-jobs/index.xml",
-  "https://himalayas.app/jobs/countries/kenya?q=frontend+developer",
 ];
 
 export async function GET(request: Request) {
