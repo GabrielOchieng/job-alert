@@ -43,6 +43,22 @@ export async function GET(request: Request) {
   results.forEach((group) => allJobs.push(...group));
 
   // Deduplicate and map
+  //   const uniqueJobs = Array.from(
+  //     new Map(
+  //       allJobs.map((j: any) => [
+  //         j.job_apply_link,
+  //         {
+  //           title: j.job_title,
+  //           company: j.employer_name,
+  //           url: j.job_apply_link,
+  //           isDirect:
+  //             j.job_apply_link.includes("lever.co") ||
+  //             j.job_apply_link.includes("greenhouse.io"),
+  //         },
+  //       ]),
+  //     ).values(),
+  //   );
+
   const uniqueJobs = Array.from(
     new Map(
       allJobs.map((j: any) => [
@@ -51,9 +67,10 @@ export async function GET(request: Request) {
           title: j.job_title,
           company: j.employer_name,
           url: j.job_apply_link,
-          isDirect:
-            j.job_apply_link.includes("lever.co") ||
-            j.job_apply_link.includes("greenhouse.io"),
+          // Detect 'Direct' ATS links
+          isDirect: /lever\.co|greenhouse\.io|workable\.com|ashbyhq\.com/.test(
+            j.job_apply_link.toLowerCase(),
+          ),
         },
       ]),
     ).values(),
@@ -61,9 +78,11 @@ export async function GET(request: Request) {
 
   if (uniqueJobs.length > 0) {
     // Sort so Direct applications are at the top
-    const sorted = uniqueJobs.sort(
-      (a: any, b: any) => (b.isDirect ? 1 : 0) - (a.isDirect ? 1 : 0),
-    );
+    // const sorted = uniqueJobs.sort(
+    //   (a: any, b: any) => (b.isDirect ? 1 : 0) - (a.isDirect ? 1 : 0),
+    // );
+
+    const sorted = uniqueJobs.sort((a: any, b: any) => (b.isDirect ? 1 : -1));
 
     await resend.emails.send({
       from: "JobBot <onboarding@resend.dev>",
