@@ -208,15 +208,30 @@ const FEEDS = [
   "https://jsremotely.com/remote-jobs.rss",
   "https://dailyremote.com/remote-frontend-developer-jobs/feed",
   "https://nodesk.co/remote-jobs/frontend/index.xml",
+  "https://remote-leaf.com/feed",
+  "https://www.workingnomads.com/jobsfeed",
+  "https://jobspresso.co/category/dev/feed/",
 ];
 
 // 2. Multi-Query Search (This is where the 'hundreds' come from)
+// const SEARCH_QUERIES = [
+//   "frontend developer remote global",
+//   "react engineer worldwide",
+//   "typescript nextjs developer remote",
+//   "senior frontend developer anywhere",
+//   "javascript engineer remote worldwide",
+// ];
+
 const SEARCH_QUERIES = [
-  "frontend developer remote global",
-  "react engineer worldwide",
-  "typescript nextjs developer remote",
-  "senior frontend developer anywhere",
-  "javascript engineer remote worldwide",
+  "frontend engineer remote",
+  "frontend developer remote",
+  "react engineer remote",
+  "nextjs developer remote",
+  "javascript engineer remote",
+  "ui engineer remote",
+  "web developer remote",
+  "software engineer frontend remote",
+  "fullstack developer react remote", // Many 'fullstack' roles are frontend-heavy
 ];
 
 export async function getDailyJobs() {
@@ -245,7 +260,7 @@ export async function getDailyJobs() {
   const apiPromises = SEARCH_QUERIES.map(async (query) => {
     try {
       const response = await fetch(
-        `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query)}&remote_jobs_only=true&date_posted=3days&num_pages=1`,
+        `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query)}&remote_jobs_only=true&date_posted=3days&num_pages=3`,
         {
           headers: {
             "x-rapidapi-key": process.env.RAPIDAPI_KEY!,
