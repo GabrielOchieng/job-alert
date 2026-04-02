@@ -3,13 +3,22 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// const SEARCH_QUERIES = [
+//   "frontend developer remote",
+//   "react engineer worldwide",
+//   "nextjs developer remote",
+//   "typescript developer global",
+//   "ui engineer remote",
+//   "web developer remote global",
+// ];
+
 const SEARCH_QUERIES = [
-  "frontend developer remote",
-  "react engineer worldwide",
+  "react engineer remote global",
   "nextjs developer remote",
-  "typescript developer global",
-  "ui engineer remote",
-  "web developer remote global",
+  "typescript frontend remote",
+  "tailwind css developer remote",
+  "javascript engineer worldwide",
+  "web developer remote anywhere",
 ];
 
 export async function GET(request: Request) {
