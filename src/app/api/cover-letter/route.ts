@@ -1,50 +1,3 @@
-// import { google } from "@ai-sdk/google";
-// import { generateText } from "ai";
-// import { getSupabase } from "@/lib/supabase";
-// import { NextResponse } from "next/server";
-
-// export async function POST(req: Request) {
-//   try {
-//     const { jobTitle, company, jobDescription } = await req.json();
-//     const supabase = getSupabase();
-
-//     const { data: profile } = await supabase
-//       .from("profiles")
-//       .select("resume_text")
-//       .eq("id", "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d")
-//       .single();
-
-//     if (!profile?.resume_text) {
-//       return NextResponse.json({ error: "Resume missing" }, { status: 400 });
-//     }
-
-//     const { text } = await generateText({
-//       // model: google("gemini-2.5-flash"),
-//       model: google("gemini-3.1-flash-lite-preview"),
-//       system: `You are the job applicant. Your name is Gabriel.
-//                Write a professional, persuasive 3-paragraph cover letter.
-
-//                STRICT WRITING RULES:
-//                - Write in the FIRST PERSON ("I am", "I have", "My experience").
-//                - NEVER refer to yourself in the third person (Avoid "As Gabriel...", use "I am...").
-//                - Do NOT act as a recruiter, agent, or third party. You ARE the candidate.
-//                - DYNAMIC CONTENT: Paragraph 2 must focus on the specific technical skills required in the JOB DESCRIPTION below and match them to your RESUME.
-//                - Tone: Professional, hungry, and clear.
-
-//                STRUCTURE:
-//                Paragraph 1: State clearly that you are applying for ${jobTitle} at ${company}.
-//                Paragraph 2: Deep dive into your relevant technical wins that solve the specific needs of this job.
-//                Paragraph 3: Professional closing and request for an interview.`,
-//       prompt: `RESUME: ${profile.resume_text}\n\nJOB TITLE: ${jobTitle}\n\nCOMPANY: ${company}\n\nJOB DESCRIPTION: ${jobDescription}`,
-//     });
-
-//     return NextResponse.json({ letter: text });
-//   } catch (error: any) {
-//     console.error("Cover Letter Error:", error);
-//     return NextResponse.json({ error: "Generation failed" }, { status: 500 });
-//   }
-// }
-
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
 import { getSupabase } from "@/lib/supabase";
@@ -91,8 +44,7 @@ export async function POST(req: Request) {
     try {
       // Try Primary Model (3.1 Lite)
       result = await generateText({
-        model: google("gemini-1.5-flash-latest"),
-        // model: google("gemini-3.1-flash-lite-preview"),
+        model: google("gemini-3.1-flash-lite-preview"),
         system: systemPrompt,
         prompt: userPrompt,
       });

@@ -1,29 +1,3 @@
-// import { getSupabase } from "@/lib/supabase";
-// import { NextResponse } from "next/server";
-
-// export async function POST(req: Request) {
-//   try {
-//     const { resumeText } = await req.json();
-//     const supabase = getSupabase();
-
-//     // Upsert: Updates if exists, inserts if not.
-//     // We use a hardcoded ID 'user_1' for now since we aren't using Auth yet.
-//     const { error } = await supabase.from("profiles").upsert({
-//       id: "00000000-0000-0000-0000-000000000000", // Use a consistent UUID
-//       resume_text: resumeText,
-//       updated_at: new Date().toISOString(),
-//     });
-
-//     if (error) throw error;
-//     return NextResponse.json({ success: true });
-//   } catch (error) {
-//     return NextResponse.json(
-//       { error: "Failed to save profile" },
-//       { status: 500 },
-//     );
-//   }
-// }
-
 import { getSupabase } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 

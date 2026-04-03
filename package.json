@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.55",
+    "@google/generative-ai": "^0.24.1",
+    "@mendable/firecrawl-js": "^4.18.1",
     "@supabase/supabase-js": "^2.101.1",
     "@tanstack/react-query": "^5.96.1",
     "@tanstack/react-query-devtools": "^5.96.1",

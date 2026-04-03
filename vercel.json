@@ -2,11 +2,15 @@
   "crons": [
     {
       "path": "/api/cron/rss",
-      "schedule": "0 9 * * *"
+      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/cron/api",
-      "schedule": "10 9 * * *"
+      "schedule": "30 8 * * *"
+    },
+    {
+      "path": "/api/jobs/ai-scout",
+      "schedule": "0 12 * * *"
     }
   ]
 }
