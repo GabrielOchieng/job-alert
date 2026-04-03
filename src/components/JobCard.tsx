@@ -22,12 +22,13 @@
 //   FileText,
 //   Sparkles,
 //   Copy,
-//   CheckCircle2,
-//   MapPin,
 //   Building2,
+//   MapPin,
 //   ExternalLink,
+//   Wand2,
 // } from "lucide-react";
 // import { toast } from "sonner";
+// import { TailorModal } from "./TailorModal"; // Ensure this matches your filename
 
 // interface Job {
 //   id: string;
@@ -39,21 +40,19 @@
 // }
 
 // export default function JobCard({ job }: { job: Job }) {
-//   // --- States ---
 //   const [matchData, setMatchData] = useState<any>(null);
 //   const [letter, setLetter] = useState("");
 //   const [isLoadingMatch, setIsLoadingMatch] = useState(false);
 //   const [isGeneratingPitch, setIsGeneratingPitch] = useState(false);
+//   const [isTailorOpen, setIsTailorOpen] = useState(false);
 
 //   const analyzeMatch = async () => {
 //     setIsLoadingMatch(true);
 //     try {
 //       const res = await fetch("/api/match", {
 //         method: "POST",
-//         // REQUIRED: Tell the server we are sending JSON
 //         headers: { "Content-Type": "application/json" },
 //         body: JSON.stringify({
-//           // Match the server expectation + provide fallback
 //           jobId: job.id,
 //           jobDescription: job.description || job.title,
 //         }),
@@ -68,13 +67,11 @@
 //     }
 //   };
 
-//   // --- Logic: Generate Pitch ---
 //   const generatePitch = async () => {
 //     setIsGeneratingPitch(true);
 //     try {
 //       const res = await fetch("/api/cover-letter", {
 //         method: "POST",
-//         // REQUIRED: Tell the server we are sending JSON
 //         headers: { "Content-Type": "application/json" },
 //         body: JSON.stringify({
 //           jobTitle: job.title,
@@ -122,12 +119,10 @@
 //       </CardHeader>
 
 //       <CardContent className="space-y-4">
-//         {/* Job Snippet */}
 //         <p className="text-sm line-clamp-3 text-muted-foreground leading-relaxed">
 //           {job.description}
 //         </p>
 
-//         {/* AI Insights (Only shown if analyzed) */}
 //         {matchData && (
 //           <div className="pt-4 border-t border-primary/5 space-y-3 animate-in fade-in slide-in-from-top-2">
 //             <div className="grid grid-cols-2 gap-4">
@@ -164,77 +159,82 @@
 //                 </div>
 //               </div>
 //             </div>
-//             <p className="text-xs italic text-muted-foreground bg-primary/5 p-2 rounded border-l-2 border-primary/20">
-//               "{matchData.brief_analysis}"
-//             </p>
 //           </div>
 //         )}
 //       </CardContent>
 
-//       <CardFooter className="flex justify-between gap-2 pt-2">
-//         <div className="flex gap-2">
+//       <CardFooter className="flex flex-wrap items-center justify-between gap-2 pt-2">
+//         <div className="flex flex-wrap gap-2">
+//           {/* Analyze Button */}
 //           <Button
 //             variant="outline"
 //             size="sm"
 //             onClick={analyzeMatch}
 //             disabled={isLoadingMatch}
-//             className="h-9 px-4 border-primary/20 hover:bg-primary/5 transition-colors"
+//             className="h-8 border-primary/20 hover:bg-primary/5"
 //           >
 //             {isLoadingMatch ? (
-//               <Loader2 className="animate-spin mr-2" size={14} />
+//               <Loader2 className="animate-spin mr-2" size={12} />
 //             ) : (
-//               <Sparkles className="mr-2 text-primary" size={14} />
+//               <Sparkles className="mr-2 text-primary" size={12} />
 //             )}
-//             {matchData ? "Re-Analyze" : "Analyze Match"}
+//             {matchData ? "Re-Analyze" : "Analyze"}
 //           </Button>
 
+//           {/* Tailor Resume Button */}
+//           <Button
+//             variant="outline"
+//             size="sm"
+//             onClick={() => setIsTailorOpen(true)}
+//             className="h-8 border-primary/20 hover:bg-primary/5"
+//           >
+//             <Wand2 className="mr-2 text-primary" size={12} />
+//             Tailor CV
+//           </Button>
+
+//           {/* Pitch Button */}
 //           <Button
 //             variant="outline"
 //             size="sm"
 //             onClick={generatePitch}
 //             disabled={isGeneratingPitch}
-//             className="h-9 px-4 border-primary/20 hover:bg-primary/5"
+//             className="h-8 border-primary/20 hover:bg-primary/5"
 //           >
 //             {isGeneratingPitch ? (
-//               <Loader2 className="animate-spin mr-2" size={14} />
+//               <Loader2 className="animate-spin mr-2" size={12} />
 //             ) : (
-//               <FileText className="mr-2 text-primary" size={14} />
+//               <FileText className="mr-2 text-primary" size={12} />
 //             )}
 //             Pitch Me
 //           </Button>
 //         </div>
 
-//         <Button size="sm" asChild className="h-9">
+//         <Button size="sm" asChild className="h-8 ml-auto">
 //           <a
 //             href={job.url}
 //             target="_blank"
 //             rel="noreferrer"
 //             className="flex items-center gap-2"
 //           >
-//             Apply <ExternalLink size={14} />
+//             Apply <ExternalLink size={12} />
 //           </a>
 //         </Button>
 //       </CardFooter>
 
 //       {/* --- Cover Letter Modal --- */}
 //       <Dialog open={!!letter} onOpenChange={() => setLetter("")}>
-//         <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+//         <DialogContent className="sm:max-w-162.5 max-h-[90vh] overflow-y-auto">
 //           <DialogHeader>
 //             <DialogTitle className="flex items-center gap-2 text-2xl">
 //               <Sparkles className="text-primary" /> Tailored Pitch
 //             </DialogTitle>
-//             <p className="text-sm text-muted-foreground italic">
-//               Tailored for {job.title} at {job.company}
-//             </p>
 //           </DialogHeader>
-
 //           <div className="relative mt-4 p-6 bg-muted/40 rounded-xl border border-primary/10">
 //             <div className="whitespace-pre-wrap text-sm leading-relaxed font-serif">
 //               {letter}
 //             </div>
 //           </div>
-
-//           <DialogFooter className="mt-6 flex sm:justify-between w-full">
+//           <DialogFooter className="mt-6">
 //             <Button variant="ghost" onClick={() => setLetter("")}>
 //               Discard
 //             </Button>
@@ -245,11 +245,18 @@
 //                 toast.success("Copied to clipboard!");
 //               }}
 //             >
-//               <Copy size={16} /> Copy to Clipboard
+//               <Copy size={16} /> Copy
 //             </Button>
 //           </DialogFooter>
 //         </DialogContent>
 //       </Dialog>
+
+//       {/* --- Resume Tailor Modal --- */}
+//       <TailorModal
+//         job={job}
+//         isOpen={isTailorOpen}
+//         onOpenChange={setIsTailorOpen}
+//       />
 //     </Card>
 //   );
 // }
@@ -257,6 +264,8 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { jobService } from "@/services/jobService";
 import {
   Card,
   CardContent,
@@ -282,9 +291,11 @@ import {
   MapPin,
   ExternalLink,
   Wand2,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
-import { TailorModal } from "./TailorModal"; // Ensure this matches your filename
+import { TailorModal } from "./TailorModal";
 
 interface Job {
   id: string;
@@ -293,14 +304,31 @@ interface Job {
   location: string;
   description: string;
   url: string;
+  status?: string;
 }
 
 export default function JobCard({ job }: { job: Job }) {
+  const queryClient = useQueryClient();
   const [matchData, setMatchData] = useState<any>(null);
   const [letter, setLetter] = useState("");
   const [isLoadingMatch, setIsLoadingMatch] = useState(false);
   const [isGeneratingPitch, setIsGeneratingPitch] = useState(false);
   const [isTailorOpen, setIsTailorOpen] = useState(false);
+
+  // --- Mutation for Updating Status ---
+  const statusMutation = useMutation({
+    mutationFn: (newStatus: string) =>
+      jobService.updateJobStatus(job.id, newStatus),
+    onSuccess: () => {
+      // Invalidate both jobs and counts to trigger a UI-wide refresh
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["job-counts"] });
+      toast.success("Status updated successfully!");
+    },
+    onError: () => {
+      toast.error("Failed to update job status.");
+    },
+  });
 
   const analyzeMatch = async () => {
     setIsLoadingMatch(true);
@@ -349,6 +377,17 @@ export default function JobCard({ job }: { job: Job }) {
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="space-y-1">
+            <div className="flex items-center gap-2 mb-1">
+              {job.status === "applied" ? (
+                <Badge className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20 text-[10px] py-0 px-2 h-5">
+                  <CheckCircle2 size={10} className="mr-1" /> Applied
+                </Badge>
+              ) : (
+                <Badge className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border-blue-500/20 text-[10px] py-0 px-2 h-5">
+                  <Clock size={10} className="mr-1" /> New Lead
+                </Badge>
+              )}
+            </div>
             <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors">
               {job.title}
             </CardTitle>
@@ -463,6 +502,24 @@ export default function JobCard({ job }: { job: Job }) {
             )}
             Pitch Me
           </Button>
+
+          {/* --- Mark as Applied Button --- */}
+          {job.status !== "applied" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => statusMutation.mutate("applied")}
+              disabled={statusMutation.isPending}
+              className="h-8 border-emerald-500/20 hover:bg-emerald-500/5 text-emerald-600"
+            >
+              {statusMutation.isPending ? (
+                <Loader2 className="animate-spin mr-2" size={12} />
+              ) : (
+                <CheckCircle2 className="mr-2" size={12} />
+              )}
+              Mark Applied
+            </Button>
+          )}
         </div>
 
         <Button size="sm" asChild className="h-8 ml-auto">
@@ -507,7 +564,6 @@ export default function JobCard({ job }: { job: Job }) {
         </DialogContent>
       </Dialog>
 
-      {/* --- Resume Tailor Modal --- */}
       <TailorModal
         job={job}
         isOpen={isTailorOpen}
