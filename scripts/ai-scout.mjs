@@ -30,7 +30,9 @@ async function run() {
       formats: ["markdown"],
       waitFor: 3000,
     });
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.1-flash-lite-preview",
+    });
 
     const prompt = `Extract a JSON list of jobs from this markdown. ONLY 100% WORLDWIDE REMOTE Software Engineering roles. Format: [{"title": "...", "company": "...", "url": "..."}] \n\n Content: ${scrapeResult.markdown}`;
 
