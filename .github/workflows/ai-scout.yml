@@ -1,0 +1,17 @@
+name: AI Job Scout
+
+on:
+  schedule:
+    # Runs every 6 hours (UTC)
+    - cron: "0 */6 * * *"
+  workflow_dispatch: # Allows you to run it manually from the GitHub UI
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger AI Scout
+        run: |
+          curl -X GET "${{ secrets.SITE_URL }}/api/jobs/ai-scout" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          --fail --max-time 300
