@@ -60,10 +60,11 @@
 import { useSearchParams } from "next/navigation";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { jobService } from "@/services/jobService";
-import JobCard from "@/components/JobCard";
+
 import { Loader2 } from "lucide-react";
 import { useInView } from "react-intersection-observer";
 import { useEffect } from "react";
+import JobCard from "@/components/JobCard";
 
 export default function JobFeed() {
   const { ref, inView } = useInView();

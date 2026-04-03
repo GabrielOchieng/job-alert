@@ -3,6 +3,7 @@
 import { Rocket } from "lucide-react";
 import { ModeToggle } from "@/components/ModeToggle";
 import Link from "next/link";
+import { ProfileModal } from "./ProfileModal";
 
 export default function Navbar() {
   return (
@@ -46,10 +47,11 @@ export default function Navbar() {
               Saved
             </Link>
           </div>
-
-          <div className="h-6 w-px bg-border/50 hidden md:block" />
-
-          <ModeToggle />
+          <div className="flex items-center gap-4">
+            <ProfileModal /> {/* Added this */}
+            <div className="h-6 w-px bg-border/50 hidden md:block" />
+            <ModeToggle />
+          </div>
         </div>
       </div>
     </nav>
