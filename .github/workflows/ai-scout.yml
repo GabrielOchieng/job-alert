@@ -1,17 +1,28 @@
-name: AI Job Scout
+name: AI Job Scout (Direct)
 
 on:
   schedule:
-    # Runs every 6 hours (UTC)
     - cron: "0 */6 * * *"
-  workflow_dispatch: # Allows you to run it manually from the GitHub UI
+  workflow_dispatch:
 
 jobs:
   scout:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger AI Scout
-        run: |
-          curl -X GET "${{ secrets.SITE_URL }}/api/jobs/ai-scout" \
-          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-          --fail --max-time 300
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
+        run: npm install @mendable/firecrawl-js @google/generative-ai @supabase/supabase-js resend dotenv
+
+      - name: Run AI Scout Script
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MY_EMAIL: ${{ secrets.MY_EMAIL }}
+        run: node scripts/ai-scout.mjs
