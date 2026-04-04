@@ -68,8 +68,9 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Remote Rocket | My Command Center",
-  description: "Automated frontend job tracking dashboard",
+  title: "Cipher Hunt | Intelligence Dashboard",
+  description:
+    "AI-powered frontend job tracking and intelligence command center.",
 };
 
 export default function RootLayout({

@@ -236,8 +236,8 @@ export default function JobFeed() {
         ) : hasNextPage ? (
           <div className="h-1 w-12 bg-primary/10 rounded-full" />
         ) : (
-          <p className="text-xs text-muted-foreground italic">
-            You&apos;ve reached the end of the rocket&apos;s reach.
+          <p className="text-xs text-muted-foreground italic font-mono">
+            [SYSTEM]: All signals decoded. End of transmission.
           </p>
         )}
       </div>

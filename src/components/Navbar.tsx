@@ -1,6 +1,6 @@
 "use client";
 
-import { Rocket, Search } from "lucide-react"; // Added Search icon
+import { Terminal, Search } from "lucide-react"; // Added Search icon
 import { ModeToggle } from "@/components/ModeToggle";
 import Link from "next/link";
 import { ProfileModal } from "./ProfileModal";
@@ -42,13 +42,13 @@ export default function Navbar() {
         {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2 font-black text-xl tracking-tighter shrink-0"
+          className="flex items-center gap-2 font-display font-black text-xl tracking-tighter shrink-0"
         >
           <div className="bg-primary p-1.5 rounded-lg text-primary-foreground shadow-lg shadow-primary/30">
-            <Rocket size={20} />
+            <Terminal size={20} strokeWidth={3} />
           </div>
-          <span className="bg-linear-to-r from-primary to-purple-400 bg-clip-text text-transparent hidden sm:block">
-            REMOTE ROCKET
+          <span className="bg-linear-to-r from-primary to-purple-400 bg-clip-text text-transparent hidden sm:block uppercase">
+            Cipher Hunt
           </span>
         </Link>
 
