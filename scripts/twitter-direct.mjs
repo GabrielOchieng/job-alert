@@ -180,10 +180,11 @@ async function runPivotScout() {
 
   // IMPROVEMENT 1: Rotate Queries to find different leads each run
   const QUERIES = [
-    `site:x.com "hiring" "frontend" "remote" ("lever.co" OR "greenhouse.io")`,
-    `site:x.com "hiring" "react" "remote" ("ashbyhq.com" OR "workable.com")`,
-    `site:x.com "looking for" "nextjs" "remote" "frontend"`,
-    `site:x.com "hiring" "frontend" "worldwide" ("app.ashbyhq.com" OR "jobs.lever.co")`,
+    // Extremely broad but filtered by AI
+    `site:x.com "hiring" "frontend" "remote"`,
+    `site:x.com "hiring" "react" "remote"`,
+    `site:x.com "hiring" "software engineer" "remote" "frontend"`,
+    `site:x.com "join our team" "frontend" "remote"`,
   ];
   const randomQuery = QUERIES[Math.floor(Math.random() * QUERIES.length)];
   const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(randomQuery)}&tbs=qdr:d`;
@@ -230,9 +231,21 @@ async function runPivotScout() {
     const jobs = JSON.parse(aiText);
     console.log(`📡 Decoded ${jobs.length} signals from the raw feed.`);
 
+    // if (jobs.length === 0) {
+    //   console.log("ℹ️ No fresh signals detected in this batch.");
+    //   return;
+    // }
+
     if (jobs.length === 0) {
-      console.log("ℹ️ No fresh signals detected in this batch.");
-      return;
+      console.log(
+        "ℹ️ No leads found, but sending System Heartbeat to check Resend...",
+      );
+      await resend.emails.send({
+        from: "CipherHunt <onboarding@resend.dev>",
+        to: process.env.MY_EMAIL,
+        subject: "🔍 Cipher Hunt: System Heartbeat",
+        html: "<p>The hunter is online, but the latest scout found 0 new signals on X.</p>",
+      });
     }
 
     const newLeads = [];
