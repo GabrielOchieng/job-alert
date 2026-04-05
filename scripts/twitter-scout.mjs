@@ -58,7 +58,7 @@ async function runTwitterScout() {
     `;
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash-latest",
+      model: "gemini-3.1-flash-lite-preview",
     });
     const result = await model.generateContent(prompt);
     const jobs = JSON.parse(
