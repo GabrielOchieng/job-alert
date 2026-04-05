@@ -178,10 +178,17 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 async function runPivotScout() {
   console.log("🕵️‍♂️ [Cipher Hunt] Intercepting X signals via Search Pivot...");
 
-  // Broadened query: Removed the hard 'after:' date to let Google find more,
-  // we will filter via AI instead. Added more job platforms.
-  const query = `site:x.com "hiring" "frontend" "remote" ("lever.co" OR "greenhouse.io" OR "ashbyhq.com" OR "workable.com" OR "apply.workable")`;
-  const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  // IMPROVEMENT 1: Rotate Queries to find different leads each run
+  const QUERIES = [
+    `site:x.com "hiring" "frontend" "remote" ("lever.co" OR "greenhouse.io")`,
+    `site:x.com "hiring" "react" "remote" ("ashbyhq.com" OR "workable.com")`,
+    `site:x.com "looking for" "nextjs" "remote" "frontend"`,
+    `site:x.com "hiring" "frontend" "worldwide" ("app.ashbyhq.com" OR "jobs.lever.co")`,
+  ];
+  const randomQuery = QUERIES[Math.floor(Math.random() * QUERIES.length)];
+  const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(randomQuery)}&tbs=qdr:d`;
+
+  console.log(`📡 Using Query: ${randomQuery}`);
 
   try {
     const scrapeResult = await firecrawl.scrape(targetUrl, {
@@ -202,14 +209,15 @@ async function runPivotScout() {
       Analyze this Markdown from a Google Search of Tweets. 
       Extract a JSON list of jobs: [{"title": "string", "company": "string", "url": "string"}]
 
-      RULES:
-      1. ONLY extract if the snippet looks like a job post from the last 3 days.
+      STRICT RULES:
+      1. ONLY extract if the snippet looks like a job post from the last 48 hours.
       2. Priority 1: Extract the direct link to the job board (Lever, Greenhouse, etc).
       3. Priority 2: If no direct link, use the Tweet URL.
       4. Use the @handle or person's name as the 'company'.
       5. Return ONLY a raw JSON array. If nothing found, return [].
     `;
 
+    // IMPROVEMENT 2: Use stable model name
     const model = genAI.getGenerativeModel({
       model: "gemini-3.1-flash-lite-preview",
     });
@@ -234,6 +242,7 @@ async function runPivotScout() {
         .select("url")
         .eq("url", job.url)
         .maybeSingle();
+
       if (!existing) {
         const { data: inserted } = await supabase
           .from("jobs")
@@ -250,9 +259,43 @@ async function runPivotScout() {
       }
     }
 
+    // IMPROVEMENT 3: Advanced Resend Logging
     if (newLeads.length > 0) {
-      console.log(`✅ Success! ${newLeads.length} stealth leads synced.`);
-      // Optional: Add Resend email call here if you want instant alerts
+      console.log(
+        `✅ Success! ${newLeads.length} leads synced. Attempting email...`,
+      );
+
+      const { data, error } = await resend.emails.send({
+        from: "CipherHunt <onboarding@resend.dev>",
+        to: process.env.MY_EMAIL, // This MUST be your Resend-verified email
+        subject: `🎯 X-Signal: ${newLeads.length} Stealth Leads Decoded`,
+        html: `
+          <div style="background: #0c0a09; color: #fafaf9; padding: 30px; font-family: monospace;">
+            <h2 style="color: #a855f7;">SIGNALS DECODED</h2>
+            ${newLeads
+              .map(
+                (j) => `
+              <div style="margin-bottom: 20px;">
+                <strong>${j.title}</strong><br/>
+                <span style="color: #a855f7;">@ ${j.company}</span><br/>
+                <a href="${j.url}" style="color: #38bdf8;">[ACCESS SIGNAL]</a>
+              </div>
+            `,
+              )
+              .join("")}
+          </div>
+        `,
+      });
+
+      if (error) {
+        console.error("❌ RESEND ERROR:", error.message);
+        console.error("DEBUG INFO:", {
+          recipient: process.env.MY_EMAIL,
+          using_onboarding_address: "onboarding@resend.dev",
+        });
+      } else {
+        console.log("📨 Email sent successfully! ID:", data.id);
+      }
     }
   } catch (err) {
     console.error("❌ Pivot Failure:", err.message);
