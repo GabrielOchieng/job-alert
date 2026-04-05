@@ -1,0 +1,33 @@
+name: X-Direct Intelligence Scout
+
+on:
+  schedule:
+    - cron: "0 */4 * * *" # Runs every 4 hours to avoid rate limits
+  workflow_dispatch: # Allows you to run it manually from the "Actions" tab
+
+jobs:
+  intercept:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Direct Intercept Script
+        env:
+          # System Keys
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MY_EMAIL: ${{ secrets.MY_EMAIL }}
+          # The X Session Token
+          TWITTER_AUTH_TOKEN: ${{ secrets.TWITTER_AUTH_TOKEN }}
+        run: node scripts/twitter-direct.mjs
