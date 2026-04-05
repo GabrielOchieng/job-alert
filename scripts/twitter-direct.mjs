@@ -178,10 +178,10 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 async function runPivotScout() {
   console.log("🕵️‍♂️ [Cipher Hunt] Intercepting X signals via Search Pivot...");
 
-  // This query looks for tweets that mention "hiring", "frontend", and "remote"
-  // AND contain a link to a job board (lever/greenhouse/ashby).
-  const query = `site:x.com "hiring" "frontend" "remote" ("lever.co" OR "greenhouse.io" OR "ashbyhq.com")`;
-  const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbs=qdr:d`;
+  // Broadened query: Removed the hard 'after:' date to let Google find more,
+  // we will filter via AI instead. Added more job platforms.
+  const query = `site:x.com "hiring" "frontend" "remote" ("lever.co" OR "greenhouse.io" OR "ashbyhq.com" OR "workable.com" OR "apply.workable")`;
+  const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
   try {
     const scrapeResult = await firecrawl.scrape(targetUrl, {
@@ -189,32 +189,43 @@ async function runPivotScout() {
       waitFor: 3000,
     });
 
-    if (!scrapeResult.markdown) throw new Error("Intelligence feed empty.");
+    if (!scrapeResult.markdown || scrapeResult.markdown.length < 100) {
+      console.log(
+        "⚠️ Scrape returned nearly empty content. Google might be rate-limiting.",
+      );
+      return;
+    }
 
+    const today = new Date().toDateString();
     const prompt = `
-      Analyze these Google Search results for Tweets. 
+      CONTEXT: Today is ${today}.
+      Analyze this Markdown from a Google Search of Tweets. 
       Extract a JSON list of jobs: [{"title": "string", "company": "string", "url": "string"}]
 
-      STRICT RULES:
-      1. Find the ACTUAL job application link if it's visible in the snippet (e.g. greenhouse.io/company/job).
-      2. If no direct link is visible, use the Tweet URL.
-      3. Use the Twitter handle mentioned in the snippet as the 'company'.
-      4. ONLY extract posts from today/yesterday.
-      5. Return ONLY a raw JSON array.
+      RULES:
+      1. ONLY extract if the snippet looks like a job post from the last 3 days.
+      2. Priority 1: Extract the direct link to the job board (Lever, Greenhouse, etc).
+      3. Priority 2: If no direct link, use the Tweet URL.
+      4. Use the @handle or person's name as the 'company'.
+      5. Return ONLY a raw JSON array. If nothing found, return [].
     `;
 
     const model = genAI.getGenerativeModel({
       model: "gemini-3.1-flash-lite-preview",
     });
     const result = await model.generateContent([prompt, scrapeResult.markdown]);
-    const jobs = JSON.parse(
-      result.response
-        .text()
-        .replace(/```json|```/g, "")
-        .trim(),
-    );
+    const aiText = result.response
+      .text()
+      .replace(/```json|```/g, "")
+      .trim();
 
-    console.log(`📡 Decoded ${jobs.length} signals.`);
+    const jobs = JSON.parse(aiText);
+    console.log(`📡 Decoded ${jobs.length} signals from the raw feed.`);
+
+    if (jobs.length === 0) {
+      console.log("ℹ️ No fresh signals detected in this batch.");
+      return;
+    }
 
     const newLeads = [];
     for (const job of jobs) {
@@ -230,7 +241,7 @@ async function runPivotScout() {
             {
               ...job,
               location: "Remote (X-Signal)",
-              description: `Stealth Lead intercepted from X for ${job.title}`,
+              description: `Stealth Lead intercepted via X-Pivot for ${job.title}`,
             },
           ])
           .select()
@@ -241,6 +252,7 @@ async function runPivotScout() {
 
     if (newLeads.length > 0) {
       console.log(`✅ Success! ${newLeads.length} stealth leads synced.`);
+      // Optional: Add Resend email call here if you want instant alerts
     }
   } catch (err) {
     console.error("❌ Pivot Failure:", err.message);
