@@ -165,7 +165,7 @@ async function runGhostScout() {
       .split("T")[0];
 
     // We look for 'worldwide', 'EMEA', or 'anywhere' to find true global roles
-    const query = `hiring "frontend" ("worldwide" OR "EMEA" OR "anywhere" OR "africa") -filter:replies -filter:retweets since:${yesterday}`;
+    const query = `hiring "frontend" ("worldwide" OR "worldwide remote" OR "remote worldwide" OR "EMEA" OR "anywhere" OR "africa" OR "kenya") -filter:replies -filter:retweets since:${yesterday}`;
 
     console.log(`📡 [GLOBAL INTERCEPT] Scanning X for: ${query}`);
 
@@ -186,8 +186,8 @@ async function runGhostScout() {
       const isLocked = [
         "us only",
         "usa only",
-        "united states",
-        "north america",
+        "united states only",
+        "north america only",
         "canada only",
         "uk only",
         "citizens only",
