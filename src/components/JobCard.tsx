@@ -671,18 +671,22 @@ export default function JobCard({ job }: { job: Job }) {
 
       {/* --- Cover Letter Modal --- */}
       <Dialog open={!!letter} onOpenChange={() => setLetter("")}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] bg-card border-primary/20">
-          <DialogHeader>
+        {/* We keep max-h-[90vh] but ensure the content inside respects it */}
+        <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col bg-card border-primary/20">
+          <DialogHeader className="flex-none">
             <DialogTitle className="flex items-center gap-2 text-2xl font-display font-black">
               <Terminal className="text-primary" /> ENCRYPTED PITCH
             </DialogTitle>
           </DialogHeader>
-          <div className="relative mt-4 p-6 bg-background/50 rounded-xl border border-primary/10">
+
+          {/* SCROLLABLE AREA: Added overflow-y-auto and flex-1 */}
+          <div className="relative mt-4 p-6 bg-background/50 rounded-xl border border-primary/10 overflow-y-auto flex-1 custom-scrollbar">
             <div className="whitespace-pre-wrap text-sm leading-relaxed font-mono text-foreground/90">
               {letter}
             </div>
           </div>
-          <DialogFooter className="mt-6">
+
+          <DialogFooter className="mt-6 flex-none">
             <Button variant="ghost" onClick={() => setLetter("")}>
               Discard
             </Button>
