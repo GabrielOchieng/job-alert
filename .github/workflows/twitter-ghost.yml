@@ -1,0 +1,33 @@
+name: X-Ghost Intelligence Scout
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # Runs every 6 hours (Safe human-like frequency)
+  workflow_dispatch: # Allows you to trigger a manual hunt from the Actions tab
+
+jobs:
+  ghost-hunt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Ghost Intercept
+        env:
+          # Your Session Injection (The most important part)
+          TWITTER_COOKIES: ${{ secrets.TWITTER_COOKIES }}
+
+          # System Keys
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MY_EMAIL: ${{ secrets.MY_EMAIL }}
+        run: node scripts/twitter-ghost.mjs
