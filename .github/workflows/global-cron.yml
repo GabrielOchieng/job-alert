@@ -1,15 +1,31 @@
-name: Global-API Rapid Scout
+name: Global RemHim Job Fetcher
 
 on:
   schedule:
-    - cron: "0 */4 * * *" # Every 4 hours
-  workflow_dispatch: # Manual trigger
+    - cron: "0 */3 * * *"
+  workflow_dispatch:
 
 jobs:
-  ping-global-scout:
+  fetch-jobs:
     runs-on: ubuntu-latest
     steps:
-      - name: Intercept Global Signals
+      - name: 1. Hit RSS Cron (Niche Boards)
         run: |
-          curl -X GET "https://${{ secrets.VERCEL_PROJECT_URL }}/api/cron/global" \
+          curl -i -X GET "https://job-alert-mu.vercel.app/api/cron/rss" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+
+      - name: Wait 15 seconds
+        run: sleep 15
+
+      - name: 2. Hit Global API Cron (Himalayas/Remotive - Free)
+        run: |
+          curl -i -X GET "https://job-alert-mu.vercel.app/api/cron/global" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+
+      - name: Wait 15 seconds
+        run: sleep 15
+
+      - name: 3. Hit JSearch Cron (RapidAPI - If credits remain)
+        run: |
+          curl -i -X GET "https://job-alert-mu.vercel.app/api/cron/api" \
           -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
