@@ -1,0 +1,15 @@
+name: Global-API Rapid Scout
+
+on:
+  schedule:
+    - cron: "0 */4 * * *" # Every 4 hours
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  ping-global-scout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Intercept Global Signals
+        run: |
+          curl -X GET "https://${{ secrets.VERCEL_PROJECT_URL }}/api/cron/global" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
