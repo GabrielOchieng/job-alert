@@ -9,23 +9,7 @@ jobs:
   fetch-jobs:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Hit RSS Cron (Niche Boards)
-        run: |
-          curl -i -X GET "https://job-alert-mu.vercel.app/api/cron/rss" \
-          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
-
-      - name: Wait 15 seconds
-        run: sleep 15
-
-      - name: 2. Hit Global API Cron (Himalayas/Remotive - Free)
+      - name: 1. Hit Global API Cron (Himalayas/Remotive - Free)
         run: |
           curl -i -X GET "https://job-alert-mu.vercel.app/api/cron/global" \
-          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
-
-      - name: Wait 15 seconds
-        run: sleep 15
-
-      - name: 3. Hit JSearch Cron (RapidAPI - If credits remain)
-        run: |
-          curl -i -X GET "https://job-alert-mu.vercel.app/api/cron/api" \
           -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
