@@ -62,4 +62,15 @@ export const jobService = {
     if (error) throw error;
     return true;
   },
+
+  async deleteJob(id: string) {
+    // 1. You must initialize the client inside the function
+    const client = getSupabase();
+
+    // 2. Use 'client' instead of 'supabase'
+    const { error } = await client.from("jobs").delete().eq("id", id);
+
+    if (error) throw error;
+    return true;
+  },
 };
