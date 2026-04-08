@@ -1,4 +1,4 @@
-name: Scaled Job Intelligence Pipeline
+name: Full-Scale Job Pipeline
 
 on:
   schedule:
@@ -11,15 +11,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - run: npm install p-limit node-fetch
-
-      - name: Run scaled pipeline
-        run: node scripts/job-pipeline-scale.mjs
+      - name: Run full pipeline
+        run: node scripts/job-pipeline-full.mjs
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
