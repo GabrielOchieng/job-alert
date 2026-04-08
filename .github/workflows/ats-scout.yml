@@ -1,27 +1,26 @@
-name: Direct-ATS Deep Scout
+name: ATS Deep Scout Discovery
 
 on:
   schedule:
-    - cron: "0 10 * * *" # Runs daily at 10:00 AM UTC (1:00 PM Nairobi)
-  workflow_dispatch: # Manual trigger
+    # Runs at minute 0 of every 5th hour
+    - cron: "0 */5 * * *"
+  workflow_dispatch:
 
 jobs:
-  scrape-ats:
+  scout:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install Dependencies
+      - name: Install
         run: npm install node-fetch p-limit @supabase/supabase-js dotenv
 
-      - name: Run Deep Scout
+      - name: Execute Scout
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: node scripts/ats-deep-scout.mjs

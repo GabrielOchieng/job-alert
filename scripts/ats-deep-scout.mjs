@@ -18,32 +18,6 @@ const FRONTEND_REGEX =
 const RESTRICTED_REGIONS =
   /us only|usa only|united states|canada only|uk only|emea only|germany only|india only/i;
 
-// Add high-growth, remote-first companies here
-const GREENHOUSE_COMPANIES = [
-  "stripe",
-  "airbnb",
-  "remote",
-  "gitpod",
-  "vercel",
-  "canonical",
-  "doist",
-  "buffer",
-  "elastic",
-  "mazury",
-  "cockroachlabs",
-];
-const LEVER_COMPANIES = [
-  "postman",
-  "mural",
-  "khulnasoft",
-  "chainlink",
-  "framer",
-  "duckduckgo",
-  "close",
-  "hotjar",
-  "sourcegraph",
-];
-
 // --- HELPERS ---
 function createFingerprint(job) {
   return crypto.createHash("md5").update(`${job.url}`).digest("hex");
@@ -54,10 +28,33 @@ function isFrontend(jobTitle) {
 }
 
 function isTrulyGlobal(locationName) {
-  if (!locationName) return true; // Benefit of the doubt
+  if (!locationName) return true;
   const loc = locationName.toLowerCase();
   if (RESTRICTED_REGIONS.test(loc)) return false;
   return true;
+}
+
+/**
+ * 🕵️‍♂️ AUTO-DISCOVERY
+ * Extracts handles from URLs to expand your database automatically
+ */
+async function discoverNewCompany(url) {
+  let handle = null;
+  let type = null;
+
+  if (url.includes("boards.greenhouse.io/")) {
+    handle = url.split("boards.greenhouse.io/")[1].split("/")[0].split("?")[0];
+    type = "greenhouse";
+  } else if (url.includes("jobs.lever.co/")) {
+    handle = url.split("jobs.lever.co/")[1].split("/")[0].split("?")[0];
+    type = "lever";
+  }
+
+  if (handle && type) {
+    await supabase
+      .from("target_companies")
+      .upsert({ handle, ats_type: type }, { onConflict: "handle" });
+  }
 }
 
 // --- SCRAPERS ---
@@ -68,9 +65,7 @@ async function scrapeGreenhouse(company) {
     );
     if (!res.ok) return [];
     const data = await res.json();
-    if (!data?.jobs) return [];
-
-    return data.jobs
+    return (data.jobs || [])
       .filter((j) => isFrontend(j.title))
       .filter((j) => isTrulyGlobal(j.location?.name))
       .map((job) => ({
@@ -83,7 +78,6 @@ async function scrapeGreenhouse(company) {
         status: "new",
       }));
   } catch (err) {
-    console.error(`❌ Greenhouse fail: ${company}`);
     return [];
   }
 }
@@ -95,9 +89,7 @@ async function scrapeLever(company) {
     );
     if (!res.ok) return [];
     const data = await res.json();
-    if (!Array.isArray(data)) return [];
-
-    return data
+    return (data || [])
       .filter((j) => isFrontend(j.text))
       .filter((j) => isTrulyGlobal(j.categories?.location))
       .map((job) => ({
@@ -110,7 +102,6 @@ async function scrapeLever(company) {
         status: "new",
       }));
   } catch (err) {
-    console.error(`❌ Lever fail: ${company}`);
     return [];
   }
 }
@@ -118,23 +109,35 @@ async function scrapeLever(company) {
 // --- MAIN PIPELINE ---
 async function runAtsScout() {
   const limit = pLimit(CONCURRENCY);
-  console.log("📡 [ATS Deep-Scout] Starting Intercept...");
 
-  const greenhousePromises = GREENHOUSE_COMPANIES.map((c) =>
-    limit(() => scrapeGreenhouse(c)),
+  // 1. Fetch current target fleet from DB
+  const { data: targets, error: fetchErr } = await supabase
+    .from("target_companies")
+    .select("handle, ats_type")
+    .eq("is_active", true);
+
+  if (fetchErr || !targets) {
+    console.error("❌ Could not load target fleet.");
+    return;
+  }
+
+  console.log(`📡 [ATS Deep-Scout] Scanning ${targets.length} targets...`);
+
+  const promises = targets.map((target) =>
+    limit(() =>
+      target.ats_type === "greenhouse"
+        ? scrapeGreenhouse(target.handle)
+        : scrapeLever(target.handle),
+    ),
   );
-  const leverPromises = LEVER_COMPANIES.map((c) => limit(() => scrapeLever(c)));
 
-  const results = await Promise.all([...greenhousePromises, ...leverPromises]);
+  const results = await Promise.all(promises);
   const allJobs = results.flat();
-
-  console.log(`🔍 Scanned ${allJobs.length} potential direct roles.`);
 
   let newCount = 0;
   for (const job of allJobs) {
     const fingerprint = createFingerprint(job);
 
-    // URL-based deduplication
     const { data: exists } = await supabase
       .from("jobs")
       .select("url")
@@ -146,11 +149,15 @@ async function runAtsScout() {
         .from("jobs")
         .insert([{ ...job, fingerprint }]);
 
-      if (!error) newCount++;
+      if (!error) {
+        newCount++;
+        // Try to discover company if it's a sub-board
+        await discoverNewCompany(job.url);
+      }
     }
   }
 
-  console.log(`✅ Pipeline Complete. Saved ${newCount} new direct-ATS leads.`);
+  console.log(`✅ Sync Complete. +${newCount} new leads.`);
 }
 
 runAtsScout();
