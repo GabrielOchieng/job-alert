@@ -1,0 +1,26 @@
+name: YC WaaS Global Scout
+
+on:
+  schedule:
+    - cron: "0 */5 * * *" # Runs every 5 hours
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  yc-scout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm install @mendable/firecrawl-js @supabase/supabase-js dotenv node-fetch
+
+      - name: Run YC Scout
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/waas-scout.mjs
