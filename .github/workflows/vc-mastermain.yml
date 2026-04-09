@@ -1,0 +1,22 @@
+name: VC-Tier Global Scout
+
+on:
+  schedule:
+    - cron: "0 */5 * * *" # Every 5 hours
+  workflow_dispatch:
+
+jobs:
+  run-vc-scout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install
+        run: npm install node-fetch p-limit @supabase/supabase-js dotenv
+      - name: Execute VC Job Scout
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/vc-ingestmain.mjs
