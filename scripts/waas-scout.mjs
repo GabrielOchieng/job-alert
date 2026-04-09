@@ -18,7 +18,8 @@ async function scoutWaaS() {
   console.log("🚀 [WaaS Scout] Intercepting YC Startup signals...");
 
   try {
-    const scrape = await firecrawl.scrape(targetUrl, {
+    // Fixed: Used TARGET_URL (uppercase) to match the definition above
+    const scrape = await firecrawl.scrape(TARGET_URL, {
       formats: ["json"],
       actions: [
         { type: "scroll", direction: "bottom" },
@@ -56,7 +57,7 @@ async function scoutWaaS() {
     for (const job of rawJobs) {
       const loc = (job.location || "").toLowerCase();
 
-      // Filter out US-Only geofencing; prioritize Worldwide/Remote
+      // Filter: Prioritize Worldwide/Remote and avoid US-only geofences
       const isRestricted = /us only|usa only|north america|canada only/i.test(
         loc,
       );
@@ -67,6 +68,7 @@ async function scoutWaaS() {
           ? job.url
           : `https://www.workatastartup.com${job.url}`;
 
+        // De-duplication check
         const { data: exists } = await supabase
           .from("jobs")
           .select("url")
@@ -74,7 +76,7 @@ async function scoutWaaS() {
           .maybeSingle();
 
         if (!exists) {
-          await supabase.from("jobs").insert([
+          const { error } = await supabase.from("jobs").insert([
             {
               title: job.title,
               company: job.company,
@@ -84,12 +86,16 @@ async function scoutWaaS() {
               status: "new",
             },
           ]);
-          newSignals++;
+
+          if (!error) {
+            newSignals++;
+            console.log(`✨ Signal Captured: ${job.title} @ ${job.company}`);
+          }
         }
       }
     }
 
-    console.log(`✅ WaaS Scout Finished. Found ${newSignals} YC signals.`);
+    console.log(`✅ WaaS Scout Finished. Found ${newSignals} new YC signals.`);
   } catch (err) {
     console.error("❌ WaaS Scout Failed:", err.message);
   }
