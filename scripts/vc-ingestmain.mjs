@@ -69,8 +69,14 @@ const supabase = createClient(
 
 async function ingestVCPortfolios() {
   const targets = [
-    { name: "Sequoia", url: "https://sequoiacap.com/our-companies/" },
-    { name: "Pear", url: "https://pear.vc/companies/" },
+    {
+      name: "Sequoia",
+      url: "https://sequoiacap.com/our-companies/?_spotlight=1#all-panel/",
+    },
+    {
+      name: "Pear",
+      url: "https://pear.vc/companies/?query_filter_id=3&filter_slug=all-companies/",
+    },
   ];
 
   for (const target of targets) {
