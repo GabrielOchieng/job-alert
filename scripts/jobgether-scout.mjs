@@ -21,10 +21,12 @@ async function scoutJobgether() {
 
   try {
     const scrape = await firecrawl.scrape(TARGET_URL, {
+      // Corrected structure for 2026 Firecrawl SDK
       formats: ["json"],
-      // Jobgether loads content well, but we'll wait for the grid to pop
-      waitFor: 3000,
       jsonOptions: {
+        type: "json", // Must explicitly state type
+        prompt:
+          "Extract all frontend or react developer job listings from the page. Include the title, company name, and the link to the job.",
         schema: {
           type: "object",
           properties: {
@@ -36,7 +38,6 @@ async function scoutJobgether() {
                   title: { type: "string" },
                   company: { type: "string" },
                   url: { type: "string" },
-                  tags: { type: "array", items: { type: "string" } },
                 },
                 required: ["title", "url"],
               },
@@ -44,6 +45,7 @@ async function scoutJobgether() {
           },
         },
       },
+      waitFor: 3000,
     });
 
     if (!scrape.success) throw new Error(scrape.error);
