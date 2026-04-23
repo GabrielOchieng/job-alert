@@ -119,9 +119,103 @@ const supabase = createClient(
 const TARGET_URL =
   "https://jobgether.com/remote-jobs/africa/frontend-developer";
 
+// async function scoutJobgether() {
+//   console.log(
+//     "🌍 [Jobgether Scout] Scanning for Africa-friendly remote roles...",
+//   );
+
+//   try {
+//     const scrape = await firecrawl.scrape(TARGET_URL, {
+//       formats: [
+//         {
+//           type: "json",
+//           prompt:
+//             "Extract the list of job postings. For each job, find the title, company name, and the job link.",
+//           schema: {
+//             type: "object",
+//             properties: {
+//               jobs: {
+//                 type: "array",
+//                 items: {
+//                   type: "object",
+//                   properties: {
+//                     title: { type: "string" },
+//                     company: { type: "string" },
+//                     url: { type: "string" },
+//                   },
+//                   required: ["title", "url"],
+//                 },
+//               },
+//             },
+//           },
+//         },
+//       ],
+//       // Removed 'actions' to stop the API warning, replaced with standard wait
+//       waitFor: 5000,
+//     });
+
+//     // Modified check: If we have the data, it's a success even with a warning
+//     const rawJobs = scrape.json?.jobs || [];
+
+//     if (rawJobs.length === 0) {
+//       console.error(
+//         "⚠️ No jobs found. Firecrawl details:",
+//         JSON.stringify(scrape, null, 2),
+//       );
+//       return;
+//     }
+
+//     console.log(`📡 AI successfully extracted ${rawJobs.length} job signals.`);
+
+//     let newSignals = 0;
+//     for (const job of rawJobs) {
+//       // Logic to filter for Frontend/React
+//       if (/frontend|react|typescript|nextjs|ui/i.test(job.title)) {
+//         const fullUrl = job.url.startsWith("http")
+//           ? job.url
+//           : `https://jobgether.com${job.url}`;
+
+//         const { data: exists } = await supabase
+//           .from("jobs")
+//           .select("url")
+//           .eq("url", fullUrl)
+//           .maybeSingle();
+
+//         if (!exists) {
+//           const { error } = await supabase.from("jobs").insert([
+//             {
+//               title: job.title,
+//               company: job.company || "Unknown Company",
+//               url: fullUrl,
+//               location: "Remote (Africa-Friendly)",
+//               source: "jobgether",
+//               status: "new",
+//             },
+//           ]);
+
+//           if (!error) {
+//             newSignals++;
+//             console.log(`✅ New Signal: ${job.title} @ ${job.company}`);
+//           }
+//         }
+//       }
+//     }
+
+//     console.log(
+//       `🏁 Harvest Complete. Captured ${newSignals} new Africa-friendly leads.`,
+//     );
+//   } catch (err) {
+//     console.error("❌ Fatal Script Crash:", err.message);
+//   }
+// }
+
+// scoutJobgether();
+
+// ... (imports and client setup remain the same)
+
 async function scoutJobgether() {
   console.log(
-    "🌍 [Jobgether Scout] Scanning for Africa-friendly remote roles...",
+    "🌍 [Jobgether Scout] Scanning for FRESH Africa-friendly remote roles...",
   );
 
   try {
@@ -129,8 +223,9 @@ async function scoutJobgether() {
       formats: [
         {
           type: "json",
+          // UPDATED PROMPT: Explicitly ask for the relative date
           prompt:
-            "Extract the list of job postings. For each job, find the title, company name, and the job link.",
+            "Extract the list of job postings. For each job, find the title, company name, the job link, and how long ago it was posted (e.g., 'Today', '3 days ago', '30+ days ago').",
           schema: {
             type: "object",
             properties: {
@@ -142,35 +237,28 @@ async function scoutJobgether() {
                     title: { type: "string" },
                     company: { type: "string" },
                     url: { type: "string" },
+                    posted_date: { type: "string" }, // Added this field
                   },
-                  required: ["title", "url"],
+                  required: ["title", "url", "posted_date"],
                 },
               },
             },
           },
         },
       ],
-      // Removed 'actions' to stop the API warning, replaced with standard wait
       waitFor: 5000,
     });
 
-    // Modified check: If we have the data, it's a success even with a warning
     const rawJobs = scrape.json?.jobs || [];
-
-    if (rawJobs.length === 0) {
-      console.error(
-        "⚠️ No jobs found. Firecrawl details:",
-        JSON.stringify(scrape, null, 2),
-      );
-      return;
-    }
-
-    console.log(`📡 AI successfully extracted ${rawJobs.length} job signals.`);
-
     let newSignals = 0;
+
     for (const job of rawJobs) {
-      // Logic to filter for Frontend/React
-      if (/frontend|react|typescript|nextjs|ui/i.test(job.title)) {
+      const titleMatch = /frontend|react|typescript|nextjs|ui/i.test(job.title);
+
+      // FRESHNESS FILTER: Reject anything that mentions "30+" or "month"
+      const isTooOld = /30\+|month|31|60|90/i.test(job.posted_date);
+
+      if (titleMatch && !isTooOld) {
         const fullUrl = job.url.startsWith("http")
           ? job.url
           : `https://jobgether.com${job.url}`;
@@ -182,28 +270,26 @@ async function scoutJobgether() {
           .maybeSingle();
 
         if (!exists) {
-          const { error } = await supabase.from("jobs").insert([
+          await supabase.from("jobs").insert([
             {
               title: job.title,
               company: job.company || "Unknown Company",
               url: fullUrl,
-              location: "Remote (Africa-Friendly)",
+              location: `Remote (${job.posted_date})`, // Store the date in location for reference
               source: "jobgether",
               status: "new",
             },
           ]);
 
-          if (!error) {
-            newSignals++;
-            console.log(`✅ New Signal: ${job.title} @ ${job.company}`);
-          }
+          newSignals++;
+          console.log(`✅ Fresh Signal: ${job.title} (${job.posted_date})`);
         }
+      } else if (isTooOld) {
+        console.log(`⏩ Skipping old job: ${job.title} (${job.posted_date})`);
       }
     }
 
-    console.log(
-      `🏁 Harvest Complete. Captured ${newSignals} new Africa-friendly leads.`,
-    );
+    console.log(`🏁 Finished. Captured ${newSignals} fresh leads.`);
   } catch (err) {
     console.error("❌ Fatal Script Crash:", err.message);
   }
