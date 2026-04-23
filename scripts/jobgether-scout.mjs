@@ -10,7 +10,6 @@ const supabase = createClient(
   process.env.SUPABASE_KEY,
 );
 
-// Targeted URL for Frontend roles specifically in Africa/Remote
 const TARGET_URL =
   "https://jobgether.com/remote-jobs/africa/frontend-developer";
 
@@ -21,40 +20,41 @@ async function scoutJobgether() {
 
   try {
     const scrape = await firecrawl.scrape(TARGET_URL, {
-      // Corrected structure for 2026 Firecrawl SDK
-      formats: ["json"],
-      jsonOptions: {
-        type: "json", // Must explicitly state type
-        prompt:
-          "Extract all frontend or react developer job listings from the page. Include the title, company name, and the link to the job.",
-        schema: {
-          type: "object",
-          properties: {
-            jobs: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  company: { type: "string" },
-                  url: { type: "string" },
+      // NEW V2 FORMAT: format is an array of objects
+      formats: [
+        {
+          type: "json",
+          prompt:
+            "Extract all frontend developer job listings from the page. Focus on the main job list. Include company name, job title, and the job link.",
+          schema: {
+            type: "object",
+            properties: {
+              jobs: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    company: { type: "string" },
+                    url: { type: "string" },
+                  },
+                  required: ["title", "url"],
                 },
-                required: ["title", "url"],
               },
             },
           },
         },
-      },
+      ],
       waitFor: 3000,
     });
 
     if (!scrape.success) throw new Error(scrape.error);
 
+    // In v2, the result is nested inside scrape.json
     const rawJobs = scrape.json.jobs || [];
     let newSignals = 0;
 
     for (const job of rawJobs) {
-      // Basic title filter to ensure it's Frontend/React related
       if (/frontend|react|typescript|nextjs|ui/i.test(job.title)) {
         const fullUrl = job.url.startsWith("http")
           ? job.url
