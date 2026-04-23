@@ -20,112 +20,6 @@
 
 //   try {
 //     const scrape = await firecrawl.scrape(TARGET_URL, {
-//       // 2026 STRICT V2 SYNTAX
-//       formats: [
-//         {
-//           type: "json",
-//           prompt:
-//             "Extract the list of job postings. For each job, find the title, company name, and the job link.",
-//           schema: {
-//             type: "object",
-//             properties: {
-//               jobs: {
-//                 type: "array",
-//                 items: {
-//                   type: "object",
-//                   properties: {
-//                     title: { type: "string" },
-//                     company: { type: "string" },
-//                     url: { type: "string" },
-//                   },
-//                   required: ["title", "url"],
-//                 },
-//               },
-//             },
-//           },
-//         },
-//       ],
-//       // Use actions to ensure the job cards are rendered
-//       actions: [{ type: "wait", milliseconds: 3000 }],
-//     });
-
-//     // Detailed error logging
-//     if (!scrape.success) {
-//       console.error(
-//         "❌ Firecrawl API Error Details:",
-//         JSON.stringify(scrape, null, 2),
-//       );
-//       return;
-//     }
-
-//     const rawJobs = scrape.json?.jobs || [];
-//     console.log(`📡 AI found ${rawJobs.length} raw listings.`);
-
-//     let newSignals = 0;
-//     for (const job of rawJobs) {
-//       if (/frontend|react|typescript|nextjs|ui/i.test(job.title)) {
-//         const fullUrl = job.url.startsWith("http")
-//           ? job.url
-//           : `https://jobgether.com${job.url}`;
-
-//         const { data: exists } = await supabase
-//           .from("jobs")
-//           .select("url")
-//           .eq("url", fullUrl)
-//           .maybeSingle();
-
-//         if (!exists) {
-//           const { error } = await supabase.from("jobs").insert([
-//             {
-//               title: job.title,
-//               company: job.company || "Unknown Company",
-//               url: fullUrl,
-//               location: "Remote (Africa-Friendly)",
-//               source: "jobgether",
-//               status: "new",
-//             },
-//           ]);
-
-//           if (!error) {
-//             newSignals++;
-//             console.log(`✅ Jobgether Lead: ${job.title}`);
-//           }
-//         }
-//       }
-//     }
-
-//     console.log(`🏁 Finished. Captured ${newSignals} new roles.`);
-//   } catch (err) {
-//     // This will now catch "targetUrl is not defined" or other crashes
-//     console.error("❌ Fatal Script Crash:", err.message);
-//     console.error(err.stack);
-//   }
-// }
-
-// scoutJobgether();
-
-import FirecrawlApp from "@mendable/firecrawl-js";
-import { createClient } from "@supabase/supabase-js";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY,
-);
-
-const TARGET_URL =
-  "https://jobgether.com/remote-jobs/africa/frontend-developer";
-
-// async function scoutJobgether() {
-//   console.log(
-//     "🌍 [Jobgether Scout] Scanning for Africa-friendly remote roles...",
-//   );
-
-//   try {
-//     const scrape = await firecrawl.scrape(TARGET_URL, {
 //       formats: [
 //         {
 //           type: "json",
@@ -211,7 +105,21 @@ const TARGET_URL =
 
 // scoutJobgether();
 
-// ... (imports and client setup remain the same)
+import FirecrawlApp from "@mendable/firecrawl-js";
+import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
+import dotenv from "dotenv";
+dotenv.config();
+
+const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY,
+);
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const TARGET_URL =
+  "https://jobgether.com/remote-jobs/africa/frontend-developer";
 
 async function scoutJobgether() {
   console.log(
@@ -223,9 +131,8 @@ async function scoutJobgether() {
       formats: [
         {
           type: "json",
-          // UPDATED PROMPT: Explicitly ask for the relative date
           prompt:
-            "Extract the list of job postings. For each job, find the title, company name, the job link, and how long ago it was posted (e.g., 'Today', '3 days ago', '30+ days ago').",
+            "Extract job postings. For each job, find the title, company name, the job link, and how long ago it was posted (e.g., 'Today', '3 days ago', '30+ days ago').",
           schema: {
             type: "object",
             properties: {
@@ -237,7 +144,7 @@ async function scoutJobgether() {
                     title: { type: "string" },
                     company: { type: "string" },
                     url: { type: "string" },
-                    posted_date: { type: "string" }, // Added this field
+                    posted_date: { type: "string" },
                   },
                   required: ["title", "url", "posted_date"],
                 },
@@ -250,12 +157,13 @@ async function scoutJobgether() {
     });
 
     const rawJobs = scrape.json?.jobs || [];
-    let newSignals = 0;
+    const newLeads = [];
 
     for (const job of rawJobs) {
+      // 1. Filter: Role must be Frontend/React related
       const titleMatch = /frontend|react|typescript|nextjs|ui/i.test(job.title);
 
-      // FRESHNESS FILTER: Reject anything that mentions "30+" or "month"
+      // 2. Filter: Reject stale jobs (30+ days or "month" mentioned)
       const isTooOld = /30\+|month|31|60|90/i.test(job.posted_date);
 
       if (titleMatch && !isTooOld) {
@@ -263,35 +171,75 @@ async function scoutJobgether() {
           ? job.url
           : `https://jobgether.com${job.url}`;
 
-        const { data: exists } = await supabase
+        // Check deduplication
+        const { data: existing } = await supabase
           .from("jobs")
           .select("url")
           .eq("url", fullUrl)
           .maybeSingle();
 
-        if (!exists) {
-          await supabase.from("jobs").insert([
-            {
-              title: job.title,
-              company: job.company || "Unknown Company",
-              url: fullUrl,
-              location: `Remote (${job.posted_date})`, // Store the date in location for reference
-              source: "jobgether",
-              status: "new",
-            },
-          ]);
+        if (!existing) {
+          const { data: inserted, error: insertError } = await supabase
+            .from("jobs")
+            .insert([
+              {
+                title: job.title,
+                company: job.company || "Unknown",
+                url: fullUrl,
+                location: `Remote (${job.posted_date})`,
+                source: "jobgether",
+                status: "new",
+              },
+            ])
+            .select()
+            .single();
 
-          newSignals++;
-          console.log(`✅ Fresh Signal: ${job.title} (${job.posted_date})`);
+          if (inserted) {
+            newLeads.push(inserted);
+            console.log(`✅ Fresh Signal: ${job.title} @ ${job.company}`);
+          }
         }
-      } else if (isTooOld) {
-        console.log(`⏩ Skipping old job: ${job.title} (${job.posted_date})`);
       }
     }
 
-    console.log(`🏁 Finished. Captured ${newSignals} fresh leads.`);
+    // --- RESEND EMAIL BLOCK ---
+    if (newLeads.length > 0) {
+      console.log(
+        `📧 Dispatching ${newLeads.length} leads to email via Resend...`,
+      );
+
+      const { data, error } = await resend.emails.send({
+        from: "Jobgether-Alerts <onboarding@resend.dev>",
+        to: process.env.MY_EMAIL,
+        subject: `🌍 Jobgether: ${newLeads.length} New Africa-Friendly Roles`,
+        html: `
+          <div style="background: #020617; color: #f8fafc; padding: 40px; font-family: sans-serif; border-top: 4px solid #10b981;">
+            <h1 style="color: #10b981; font-size: 20px; text-transform: uppercase;">Jobgether Africa Intel</h1>
+            <p style="color: #94a3b8;">Fresh remote opportunities detected in your region.</p>
+            <hr style="border: none; border-top: 1px solid #1e293b; margin: 20px 0;">
+            ${newLeads
+              .map(
+                (j) => `
+              <div style="margin-bottom: 20px; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #1e293b;">
+                <div style="font-size: 16px; font-weight: bold;">${j.title}</div>
+                <div style="color: #10b981; margin: 4px 0;">${j.company}</div>
+                <div style="font-size: 12px; color: #64748b; margin-bottom: 10px;">${j.location}</div>
+                <a href="${j.url}" style="color: white; background: #10b981; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 12px;">VIEW ROLE →</a>
+              </div>
+            `,
+              )
+              .join("")}
+          </div>
+        `,
+      });
+
+      if (error) console.error("❌ Resend Error:", error.message);
+      else console.log("📨 Email dispatched successfully!");
+    } else {
+      console.log("ℹ️ No new fresh signals found this run.");
+    }
   } catch (err) {
-    console.error("❌ Fatal Script Crash:", err.message);
+    console.error("❌ Jobgether Scout Failure:", err.message);
   }
 }
 
