@@ -20,12 +20,12 @@ async function scoutJobgether() {
 
   try {
     const scrape = await firecrawl.scrape(TARGET_URL, {
-      // NEW V2 FORMAT: format is an array of objects
+      // 2026 STRICT V2 SYNTAX
       formats: [
         {
           type: "json",
           prompt:
-            "Extract all frontend developer job listings from the page. Focus on the main job list. Include company name, job title, and the job link.",
+            "Extract the list of job postings. For each job, find the title, company name, and the job link.",
           schema: {
             type: "object",
             properties: {
@@ -45,15 +45,23 @@ async function scoutJobgether() {
           },
         },
       ],
-      waitFor: 3000,
+      // Use actions to ensure the job cards are rendered
+      actions: [{ type: "wait", milliseconds: 3000 }],
     });
 
-    if (!scrape.success) throw new Error(scrape.error);
+    // Detailed error logging
+    if (!scrape.success) {
+      console.error(
+        "❌ Firecrawl API Error Details:",
+        JSON.stringify(scrape, null, 2),
+      );
+      return;
+    }
 
-    // In v2, the result is nested inside scrape.json
-    const rawJobs = scrape.json.jobs || [];
+    const rawJobs = scrape.json?.jobs || [];
+    console.log(`📡 AI found ${rawJobs.length} raw listings.`);
+
     let newSignals = 0;
-
     for (const job of rawJobs) {
       if (/frontend|react|typescript|nextjs|ui/i.test(job.title)) {
         const fullUrl = job.url.startsWith("http")
@@ -86,11 +94,11 @@ async function scoutJobgether() {
       }
     }
 
-    console.log(
-      `🏁 Finished. Captured ${newSignals} new roles from Jobgether.`,
-    );
+    console.log(`🏁 Finished. Captured ${newSignals} new roles.`);
   } catch (err) {
-    console.error("❌ Jobgether Scout Failed:", err.message);
+    // This will now catch "targetUrl is not defined" or other crashes
+    console.error("❌ Fatal Script Crash:", err.message);
+    console.error(err.stack);
   }
 }
 
