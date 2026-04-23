@@ -16,11 +16,15 @@ jobs:
           node-version: 20
 
       - name: Install Dependencies
-        run: npm install @mendable/firecrawl-js @supabase/supabase-js dotenv
+        # Added 'resend' to the install list
+        run: npm install @mendable/firecrawl-js @supabase/supabase-js resend dotenv
 
       - name: Run Jobgether Scout
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # ADDED THESE TWO LINES BELOW
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MY_EMAIL: ${{ secrets.MY_EMAIL }}
         run: node scripts/jobgether-scout.mjs
