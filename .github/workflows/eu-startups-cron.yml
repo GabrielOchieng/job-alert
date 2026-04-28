@@ -1,0 +1,26 @@
+name: EU Startups Scout
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # Daily at 12 PM Nairobi Time
+  workflow_dispatch:
+
+jobs:
+  eu-scout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Dependencies
+        run: npm install @mendable/firecrawl-js @supabase/supabase-js resend @google/generative-ai dotenv
+      - name: Run EU Scout
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MY_EMAIL: ${{ secrets.MY_EMAIL }}
+        run: node scripts/eu-startups-scout.mjs
