@@ -52,7 +52,9 @@ async function scoutDexa() {
 
     for (const job of rawJobs) {
       // Logic check: Must be Frontend/React and NOT older than a few days
-      const isFrontend = /frontend|react|next|typescript|ui/i.test(job.title);
+      const isFrontend = /frontend|react|next|typescript|web|ui/i.test(
+        job.title,
+      );
       const isFresh = !/30\+|month|week|14|21/i.test(job.posted_at || "");
 
       if (isFrontend && isFresh) {
