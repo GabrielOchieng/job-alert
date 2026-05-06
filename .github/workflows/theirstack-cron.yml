@@ -1,0 +1,26 @@
+name: TheirStack ATS Scout
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # Runs daily at 9:00 AM Nairobi Time
+  workflow_dispatch:
+
+jobs:
+  theirstack-scout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # Fixes the WebSocket issue natively
+      - name: Install Dependencies
+        run: npm install axios @supabase/supabase-js resend @google/generative-ai dotenv
+      - name: Run TheirStack Scout
+        env:
+          THEIRSTACK_API_KEY: ${{ secrets.THEIRSTACK_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MY_EMAIL: ${{ secrets.MY_EMAIL }}
+        run: node scripts/theirstack-scout.mjs
