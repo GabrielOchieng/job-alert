@@ -1,6 +1,7 @@
 import axios from "axios";
 import { dedupeAndInsertJobs } from "./lib/db.mjs";
 import { sendNewLeadsEmail } from "./lib/notify.mjs";
+import { reportFailure } from "./lib/alert.mjs";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -73,7 +74,9 @@ async function scoutTheirStack() {
       console.log("ℹ️ No new unique signals found.");
     }
   } catch (err) {
-    console.error("❌ TheirStack Failure:", err.response?.data || err.message);
+    await reportFailure("theirstack-scout", err, {
+      responseData: err.response?.data,
+    });
   }
 }
 

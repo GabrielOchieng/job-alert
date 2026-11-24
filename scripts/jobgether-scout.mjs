@@ -2,6 +2,7 @@ import FirecrawlApp from "@mendable/firecrawl-js";
 import { generateColdOutreach } from "./outreach-generator.mjs"; // Imported your logic
 import { findNewJobs, insertJobs } from "./lib/db.mjs";
 import { sendNewLeadsEmail } from "./lib/notify.mjs";
+import { reportFailure } from "./lib/alert.mjs";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -132,7 +133,7 @@ async function scoutJobgether() {
       console.log("ℹ️ No new fresh signals detected.");
     }
   } catch (err) {
-    console.error("❌ Jobgether Scout Failure:", err.message);
+    await reportFailure("jobgether-scout", err);
   }
 }
 

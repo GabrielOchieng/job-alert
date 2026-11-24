@@ -3,6 +3,7 @@ import FirecrawlApp from "@mendable/firecrawl-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { dedupeAndInsertJobs } from "./lib/db.mjs";
 import { sendNewLeadsEmail } from "./lib/notify.mjs";
+import { reportFailure } from "./lib/alert.mjs";
 
 // Note: GitHub Actions injects env variables directly,
 // so we don't strictly need dotenv.config() here.
@@ -88,8 +89,7 @@ async function run() {
       console.log("ℹ️ No new jobs found this run.");
     }
   } catch (err) {
-    console.error("❌ Critical Scout Failure:", err.message);
-    process.exit(1);
+    await reportFailure("ai-scout", err);
   }
 }
 

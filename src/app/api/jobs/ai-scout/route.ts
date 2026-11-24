@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import FirecrawlApp from "@mendable/firecrawl-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { filterNewJobs } from "@/lib/supabase-admin";
+import { reportFailure } from "@/lib/alert";
 import { Resend } from "resend"; // 1. Import Resend
 
 export const maxDuration = 60;
@@ -108,7 +109,7 @@ export async function GET(req: Request) {
       new_leads: newJobs.length,
     });
   } catch (error: any) {
-    console.error("AI Scout Critical Failure:", error.message);
+    await reportFailure("jobs/ai-scout", error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 },

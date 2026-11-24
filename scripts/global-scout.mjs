@@ -2,6 +2,7 @@ import FirecrawlApp from "@mendable/firecrawl-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { dedupeAndInsertJobs } from "./lib/db.mjs";
 import { sendNewLeadsEmail } from "./lib/notify.mjs";
+import { reportFailure } from "./lib/alert.mjs";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -106,7 +107,7 @@ async function runGlobalScout() {
       console.log("ℹ️ All signals were duplicates. No email dispatched.");
     }
   } catch (err) {
-    console.error("❌ GLOBAL SCOUT FAILURE:", err.message);
+    await reportFailure("global-scout", err);
   }
 }
 

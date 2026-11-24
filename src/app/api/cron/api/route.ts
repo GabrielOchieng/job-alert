@@ -104,6 +104,7 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { filterNewJobs } from "@/lib/supabase-admin";
 import { isWorldwide } from "@/lib/filters"; // Import the bouncer
+import { reportFailure } from "@/lib/alert";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -122,83 +123,88 @@ export async function GET(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  let allJobs: any[] = [];
+  try {
+    let allJobs: any[] = [];
 
-  const apiPromises = SEARCH_QUERIES.map(async (query) => {
-    try {
-      const res = await fetch(
-        `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query)}&remote_jobs_only=true&date_posted=today&page=1&num_pages=1`,
-        {
-          headers: {
-            "x-rapidapi-key": process.env.RAPIDAPI_KEY!,
-            "x-rapidapi-host": "jsearch.p.rapidapi.com",
+    const apiPromises = SEARCH_QUERIES.map(async (query) => {
+      try {
+        const res = await fetch(
+          `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query)}&remote_jobs_only=true&date_posted=today&page=1&num_pages=1`,
+          {
+            headers: {
+              "x-rapidapi-key": process.env.RAPIDAPI_KEY!,
+              "x-rapidapi-host": "jsearch.p.rapidapi.com",
+            },
           },
-        },
-      );
-      const data = await res.json();
-      return data.data || [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  const results = await Promise.all(apiPromises);
-  results.forEach((group) => allJobs.push(...group));
-
-  const uniqueJobs = Array.from(
-    new Map(
-      allJobs.map((j: any) => [
-        j.job_apply_link,
-        {
-          title: j.job_title,
-          company: j.employer_name,
-          url: j.job_apply_link,
-          isDirect: /lever\.co|greenhouse\.io|workable\.com|ashbyhq\.com/.test(
-            j.job_apply_link.toLowerCase(),
-          ),
-        },
-      ]),
-    ).values(),
-  );
-
-  // --- THE BOUNCER ---
-  const highSignalJobs = uniqueJobs.filter((j) =>
-    isWorldwide(j.title, j.company),
-  );
-
-  // Filter only highSignalJobs against DB
-  const newJobs = await filterNewJobs(highSignalJobs);
-
-  if (newJobs.length > 0) {
-    const sorted = newJobs.sort((a: any, b: any) => (b.isDirect ? 1 : -1));
-
-    await resend.emails.send({
-      from: "JobBot <onboarding@resend.dev>",
-      to: process.env.MY_EMAIL!,
-      subject: `🌍 ${sorted.length} NEW Global Jobs Found`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px;">
-          <h2>Fresh Remote Leads</h2>
-          <hr />
-          ${sorted
-            .map(
-              (j: any) => `
-            <div style="margin-bottom: 20px;">
-              ${j.isDirect ? "⭐ <strong style='color: #059669;'>DIRECT APPLY</strong><br>" : ""}
-              <strong style="font-size: 1.1em;">${j.title}</strong> @ ${j.company}<br>
-              <a href="${j.url}" style="color: #2563eb; text-decoration: none;">Apply Now →</a>
-            </div>
-          `,
-            )
-            .join("")}
-        </div>
-      `,
+        );
+        const data = await res.json();
+        return data.data || [];
+      } catch (e) {
+        return [];
+      }
     });
-  }
 
-  return NextResponse.json({
-    total_found: uniqueJobs.length,
-    passed_filter: highSignalJobs.length,
-    new_sent: newJobs.length,
-  });
+    const results = await Promise.all(apiPromises);
+    results.forEach((group) => allJobs.push(...group));
+
+    const uniqueJobs = Array.from(
+      new Map(
+        allJobs.map((j: any) => [
+          j.job_apply_link,
+          {
+            title: j.job_title,
+            company: j.employer_name,
+            url: j.job_apply_link,
+            isDirect: /lever\.co|greenhouse\.io|workable\.com|ashbyhq\.com/.test(
+              j.job_apply_link.toLowerCase(),
+            ),
+          },
+        ]),
+      ).values(),
+    );
+
+    // --- THE BOUNCER ---
+    const highSignalJobs = uniqueJobs.filter((j) =>
+      isWorldwide(j.title, j.company),
+    );
+
+    // Filter only highSignalJobs against DB
+    const newJobs = await filterNewJobs(highSignalJobs);
+
+    if (newJobs.length > 0) {
+      const sorted = newJobs.sort((a: any, b: any) => (b.isDirect ? 1 : -1));
+
+      await resend.emails.send({
+        from: "JobBot <onboarding@resend.dev>",
+        to: process.env.MY_EMAIL!,
+        subject: `🌍 ${sorted.length} NEW Global Jobs Found`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px;">
+            <h2>Fresh Remote Leads</h2>
+            <hr />
+            ${sorted
+              .map(
+                (j: any) => `
+              <div style="margin-bottom: 20px;">
+                ${j.isDirect ? "⭐ <strong style='color: #059669;'>DIRECT APPLY</strong><br>" : ""}
+                <strong style="font-size: 1.1em;">${j.title}</strong> @ ${j.company}<br>
+                <a href="${j.url}" style="color: #2563eb; text-decoration: none;">Apply Now →</a>
+              </div>
+            `,
+              )
+              .join("")}
+          </div>
+        `,
+      });
+    }
+
+    return NextResponse.json({
+      total_found: uniqueJobs.length,
+      passed_filter: highSignalJobs.length,
+      new_sent: newJobs.length,
+    });
+  } catch (error) {
+    await reportFailure("cron/api", error);
+    return NextResponse.json({ error: "API cron failed" }, { status: 500 });
+  }
 }

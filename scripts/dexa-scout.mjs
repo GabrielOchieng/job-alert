@@ -2,6 +2,7 @@ import FirecrawlApp from "@mendable/firecrawl-js";
 import { generateColdOutreach } from "./outreach-generator.mjs";
 import { findNewJobs, insertJobs } from "./lib/db.mjs";
 import { sendNewLeadsEmail } from "./lib/notify.mjs";
+import { reportFailure } from "./lib/alert.mjs";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -110,7 +111,7 @@ async function scoutDexa() {
     });
     if (result.sent) console.log(`📨 ${newLeads.length} Dexa-leads dispatched!`);
   } catch (err) {
-    console.error("❌ Dexa Scout Failure:", err.message);
+    await reportFailure("dexa-scout", err);
   }
 }
 

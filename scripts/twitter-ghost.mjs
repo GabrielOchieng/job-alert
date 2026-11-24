@@ -1,6 +1,7 @@
 import { Scraper, SearchMode } from "@the-convocation/twitter-scraper";
 import { dedupeAndInsertJobs } from "./lib/db.mjs";
 import { sendNewLeadsEmail } from "./lib/notify.mjs";
+import { reportFailure } from "./lib/alert.mjs";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -122,7 +123,7 @@ async function runGhostScout() {
       );
     }
   } catch (err) {
-    console.error("❌ GHOST FAILURE:", err.message);
+    await reportFailure("twitter-ghost", err);
   }
 }
 

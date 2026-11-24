@@ -6,6 +6,7 @@
 // identical card-per-job HTML layout. This module gives them one place to
 // send that from.
 import { Resend } from "resend";
+import { logError } from "./alert.mjs";
 
 let resendClient = null;
 
@@ -66,7 +67,7 @@ export async function sendNewLeadsEmail({
 
   const { error } = await resend.emails.send({ from, to, subject, html });
   if (error) {
-    console.error("sendNewLeadsEmail failed:", error.message || error);
+    logError("sendNewLeadsEmail", error, { subject });
     return { sent: false, reason: error.message || "unknown-error" };
   }
   return { sent: true };

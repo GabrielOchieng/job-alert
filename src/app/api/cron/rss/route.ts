@@ -114,6 +114,7 @@ import { Resend } from "resend";
 import Parser from "rss-parser";
 import { filterNewJobs } from "@/lib/supabase-admin";
 import { isWorldwide } from "@/lib/filters"; // Import the bouncer
+import { reportFailure } from "@/lib/alert";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const parser = new Parser();
@@ -132,83 +133,88 @@ export async function GET(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const allJobs: any[] = [];
-  const lookbackDate = new Date();
-  lookbackDate.setHours(lookbackDate.getHours() - 12);
+  try {
+    const allJobs: any[] = [];
+    const lookbackDate = new Date();
+    lookbackDate.setHours(lookbackDate.getHours() - 12);
 
-  for (const url of FEEDS) {
-    try {
-      const response = await fetch(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          Accept: "application/rss+xml, application/xml, text/xml",
-        },
-        cache: "no-store",
-      });
-      if (!response.ok) continue;
-      const xml = await response.text();
-      const feed = await parser.parseString(xml);
+    for (const url of FEEDS) {
+      try {
+        const response = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0",
+            Accept: "application/rss+xml, application/xml, text/xml",
+          },
+          cache: "no-store",
+        });
+        if (!response.ok) continue;
+        const xml = await response.text();
+        const feed = await parser.parseString(xml);
 
-      const items = feed.items.map((item) => ({
-        title: item.title,
-        company: item.creator || item.author || "Remote Company",
-        url: item.link,
-        date: new Date(item.pubDate || item.isoDate || ""),
-      }));
-      allJobs.push(...items);
-    } catch (e) {
-      console.error(`RSS Fail for ${url}`);
+        const items = feed.items.map((item) => ({
+          title: item.title,
+          company: item.creator || item.author || "Remote Company",
+          url: item.link,
+          date: new Date(item.pubDate || item.isoDate || ""),
+        }));
+        allJobs.push(...items);
+      } catch (e) {
+        console.error(`RSS Fail for ${url}`);
+      }
     }
-  }
 
-  const keywords = [
-    "frontend",
-    "front-end",
-    "react",
-    "typescript",
-    "next.js",
-    "javascript",
-  ];
+    const keywords = [
+      "frontend",
+      "front-end",
+      "react",
+      "typescript",
+      "next.js",
+      "javascript",
+    ];
 
-  const filtered = allJobs.filter(
-    (j) =>
-      j.date >= lookbackDate &&
-      keywords.some((key) => j.title?.toLowerCase().includes(key)) &&
-      isWorldwide(j.title || "", j.company || ""), // --- ADDED BOUNCER HERE ---
-  );
+    const filtered = allJobs.filter(
+      (j) =>
+        j.date >= lookbackDate &&
+        keywords.some((key) => j.title?.toLowerCase().includes(key)) &&
+        isWorldwide(j.title || "", j.company || ""), // --- ADDED BOUNCER HERE ---
+    );
 
-  const uniqueJobs = Array.from(
-    new Map(filtered.map((j) => [j.url, j])).values(),
-  );
-  const newJobs = await filterNewJobs(uniqueJobs);
+    const uniqueJobs = Array.from(
+      new Map(filtered.map((j) => [j.url, j])).values(),
+    );
+    const newJobs = await filterNewJobs(uniqueJobs);
 
-  if (newJobs.length > 0) {
-    await resend.emails.send({
-      from: "JobBot <onboarding@resend.dev>",
-      to: process.env.MY_EMAIL!,
-      subject: `🏹 ${newJobs.length} NEW Niche Remote Roles`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
-          <h2 style="color: #2563eb;">Fresh Niche Leads</h2>
-          <hr style="border: 0; border-top: 1px solid #eee;" />
-          ${newJobs
-            .map(
-              (j) => `
-            <div style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
-              <div style="font-size: 16px; font-weight: bold; color: #111;">${j.title}</div>
-              <div style="color: #666; margin: 4px 0;">🏢 ${j.company}</div>
-              <a href="${j.url}" style="color: #2563eb; text-decoration: none; font-size: 14px; font-weight: bold;">View Posting →</a>
-            </div>
-          `,
-            )
-            .join("")}
-        </div>
-      `,
+    if (newJobs.length > 0) {
+      await resend.emails.send({
+        from: "JobBot <onboarding@resend.dev>",
+        to: process.env.MY_EMAIL!,
+        subject: `🏹 ${newJobs.length} NEW Niche Remote Roles`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+            <h2 style="color: #2563eb;">Fresh Niche Leads</h2>
+            <hr style="border: 0; border-top: 1px solid #eee;" />
+            ${newJobs
+              .map(
+                (j) => `
+              <div style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+                <div style="font-size: 16px; font-weight: bold; color: #111;">${j.title}</div>
+                <div style="color: #666; margin: 4px 0;">🏢 ${j.company}</div>
+                <a href="${j.url}" style="color: #2563eb; text-decoration: none; font-size: 14px; font-weight: bold;">View Posting →</a>
+              </div>
+            `,
+              )
+              .join("")}
+          </div>
+        `,
+      });
+    }
+
+    return NextResponse.json({
+      total_processed: uniqueJobs.length,
+      new_sent: newJobs.length,
     });
+  } catch (error) {
+    await reportFailure("cron/rss", error);
+    return NextResponse.json({ error: "RSS cron failed" }, { status: 500 });
   }
-
-  return NextResponse.json({
-    total_processed: uniqueJobs.length,
-    new_sent: newJobs.length,
-  });
 }

@@ -16,11 +16,13 @@ jobs:
           node-version: 22
 
       - name: Install Dependencies
-        run: npm install @mendable/firecrawl-js @supabase/supabase-js dotenv node-fetch
+        run: npm install @mendable/firecrawl-js @supabase/supabase-js dotenv node-fetch resend
 
       - name: Run YC Scout
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MY_EMAIL: ${{ secrets.MY_EMAIL }}
         run: node scripts/waas-scout.mjs

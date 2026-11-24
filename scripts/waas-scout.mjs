@@ -1,5 +1,6 @@
 import FirecrawlApp from "@mendable/firecrawl-js";
 import { dedupeAndInsertJobs } from "./lib/db.mjs";
+import { reportFailure } from "./lib/alert.mjs";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -77,7 +78,7 @@ async function scoutWaaS() {
 
     console.log(`✅ WaaS Scout Finished. Found ${newLeads.length} new YC signals.`);
   } catch (err) {
-    console.error("❌ WaaS Scout Failed:", err.message);
+    await reportFailure("waas-scout", err);
   }
 }
 

@@ -2,6 +2,7 @@ import FirecrawlApp from "@mendable/firecrawl-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { dedupeAndInsertJobs } from "./lib/db.mjs";
 import { sendNewLeadsEmail } from "./lib/notify.mjs";
+import { reportFailure } from "./lib/alert.mjs";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -105,7 +106,7 @@ async function runPivotScout() {
       if (result.sent) console.log("📨 EMAIL SENT!");
     }
   } catch (err) {
-    console.error("❌ CRITICAL TRANSMISSION FAILURE:", err.message);
+    await reportFailure("twitter-direct", err);
   }
 }
 

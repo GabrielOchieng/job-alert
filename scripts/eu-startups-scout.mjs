@@ -2,6 +2,7 @@ import FirecrawlApp from "@mendable/firecrawl-js";
 import { generateColdOutreach } from "./outreach-generator.mjs";
 import { findNewJobs, insertJobs } from "./lib/db.mjs";
 import { sendNewLeadsEmail } from "./lib/notify.mjs";
+import { reportFailure } from "./lib/alert.mjs";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -109,7 +110,7 @@ async function scoutEUTech() {
       renderHtml,
     });
   } catch (err) {
-    console.error("❌ EU Scout Failure:", err.message);
+    await reportFailure("eu-startups-scout", err);
   }
 }
 

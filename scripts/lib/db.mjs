@@ -5,6 +5,7 @@
 // insert if not" loop (one query per job). This module gives them a single
 // client and a single bulk dedupe-and-insert helper instead.
 import { createClient } from "@supabase/supabase-js";
+import { logError } from "./alert.mjs";
 
 let client = null;
 
@@ -65,7 +66,7 @@ export async function findNewJobs(
     );
 
   if (selectError) {
-    console.error(`findNewJobs: lookup failed on ${table}:`, selectError.message);
+    logError("findNewJobs", selectError, { table });
     return [];
   }
 
@@ -83,7 +84,7 @@ export async function insertJobs(
 
   const { error } = await db.from(table).insert(jobs);
   if (error) {
-    console.error(`insertJobs: insert failed on ${table}:`, error.message);
+    logError("insertJobs", error, { table, count: jobs.length });
     return false;
   }
   return true;

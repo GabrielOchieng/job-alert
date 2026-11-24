@@ -2,6 +2,7 @@ import FirecrawlApp from "@mendable/firecrawl-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { dedupeAndInsertJobs } from "./lib/db.mjs";
 import { sendNewLeadsEmail } from "./lib/notify.mjs";
+import { reportFailure } from "./lib/alert.mjs";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -76,7 +77,7 @@ async function runTwitterScout() {
       console.log("ℹ️ No brand new leads found this time.");
     }
   } catch (err) {
-    console.error("❌ CRITICAL ERROR:", err.message);
+    await reportFailure("twitter-scout", err);
   }
 }
 
