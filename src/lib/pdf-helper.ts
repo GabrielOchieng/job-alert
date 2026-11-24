@@ -1,151 +1,10 @@
-// import { jsPDF } from "jspdf";
-
-// export const generateTailoredPDF = (tailoredData: any, job: any) => {
-//   // 1. Layout Config: A4 Format (8.27" x 11.69")
-//   const doc = new jsPDF({
-//     format: "a4",
-//     unit: "pt", // Using points for fine control over pt spacing
-//   });
-
-//   const pageWidth = doc.internal.pageSize.getWidth();
-
-//   // 2. Margins & Padding
-//   const marginX = 72; // 1 inch = 72pt (Left & Right margins)
-//   const marginY = 72; // 1 inch = 72pt (Top & Bottom margins)
-//   const leftColWidth = 160;
-//   const rightColX = marginX + leftColWidth + 24; // 24pt gap between sections
-
-//   // 3. Text Config: Font Size "S" and Line Height 100%
-//   const baseFontSize = 9; // "Small" typically maps to 9pt
-//   const titleFontSize = 11;
-//   const nameFontSize = 24;
-//   const lineHeight = 1.2; // Equivalent to 100% line height for readability in PDF
-
-//   // --- Header: GABRIEL OCHIENG ---
-//   doc.setFont("helvetica", "bold");
-//   doc.setFontSize(nameFontSize);
-//   doc.setTextColor(33, 33, 33);
-//   doc.text("GABRIEL OCHIENG", pageWidth / 2, marginY - 20, { align: "center" });
-
-//   doc.setFontSize(baseFontSize);
-//   doc.setFont("helvetica", "normal");
-//   doc.setTextColor(100);
-//   doc.text(
-//     "SOFTWARE DEVELOPER  |  NAIROBI, KENYA  |  +254792390805",
-//     pageWidth / 2,
-//     marginY - 5,
-//     { align: "center" },
-//   );
-
-//   // --- Left Column (Sidebar) ---
-//   let leftY = marginY + 20;
-//   doc.setTextColor(33, 33, 33);
-
-//   // Details Section
-//   doc.setFont("helvetica", "bold");
-//   doc.text("DETAILS", marginX, leftY);
-//   leftY += 12; // Inside content block spacing
-//   doc.setFont("helvetica", "normal");
-//   doc.text(
-//     ["Nairobi", "Kenya", "+254792390805", "ogingagabriel@gmail.com"],
-//     marginX,
-//     leftY,
-//     { lineHeightFactor: lineHeight },
-//   );
-
-//   // Skills Section (Merging Base + AI Missing Keywords)
-//   leftY += 48; // Between sections: 24pt-48pt
-//   doc.setFont("helvetica", "bold");
-//   doc.text("SKILLS", marginX, leftY);
-//   leftY += 12;
-//   doc.setFont("helvetica", "normal");
-//   const baseSkills = [
-//     "JavaScript, TypeScript",
-//     "React, Next.js",
-//     "Node.js, Express",
-//     "Redux, Zustand",
-//     "Tailwind, MUI",
-//   ];
-//   const combinedSkills = [
-//     ...baseSkills,
-//     ...(tailoredData.keyKeywordsMissing || []),
-//   ];
-//   doc.text(combinedSkills, marginX, leftY, { lineHeightFactor: 1.5 });
-
-//   // --- Right Column (Main Content) ---
-//   let rightY = marginY + 20;
-
-//   // Profile Section (AI Optimized)
-//   doc.setFont("helvetica", "bold");
-//   doc.setFontSize(titleFontSize);
-//   doc.text("PROFILE", rightColX, rightY);
-//   rightY += 16; // Between Title & Content
-//   doc.setFont("helvetica", "normal");
-//   doc.setFontSize(baseFontSize);
-//   const summary = doc.splitTextToSize(
-//     tailoredData.optimizedSummary,
-//     pageWidth - rightColX - marginX,
-//   );
-//   doc.text(summary, rightColX, rightY, { lineHeightFactor: lineHeight });
-
-//   // Employment History Section
-//   rightY += summary.length * 12 + 24; // Between sections
-//   doc.setFont("helvetica", "bold");
-//   doc.setFontSize(titleFontSize);
-//   doc.text("EMPLOYMENT HISTORY", rightColX, rightY);
-
-//   // 1. Jambojet (AI Optimized Bullets)
-//   rightY += 16;
-//   doc.setFontSize(baseFontSize + 1);
-//   doc.text("Frontend Developer at Jambojet, Nairobi", rightColX, rightY);
-//   doc.setFont("helvetica", "normal");
-//   doc.setFontSize(baseFontSize - 1);
-//   doc.setTextColor(120);
-//   doc.text("Nov 2024 — Present", rightColX, rightY + 12);
-
-//   doc.setTextColor(33, 33, 33);
-//   doc.setFontSize(baseFontSize);
-//   rightY += 24; // Between Content blocks
-//   tailoredData.suggestedBulletPoints.forEach((point: string) => {
-//     const lines = doc.splitTextToSize(
-//       `• ${point}`,
-//       pageWidth - rightColX - marginX - 10,
-//     );
-//     doc.text(lines, rightColX, rightY, { lineHeightFactor: lineHeight });
-//     rightY += lines.length * 12 + 4; // Inside content block
-//   });
-
-//   // 2. Shop Online
-//   rightY += 12;
-//   doc.setFont("helvetica", "bold");
-//   doc.text(
-//     "Junior Full Stack Developer at Shop Online, New York",
-//     rightColX,
-//     rightY,
-//   );
-//   doc.setFont("helvetica", "normal");
-//   doc.text(
-//     "• Completed products through SDLC and enhanced backend performance.",
-//     rightColX,
-//     rightY + 12,
-//   );
-
-//   // --- Vertical Divider (Mimicking resume.io layout) ---
-//   doc.setDrawColor(230);
-//   doc.setLineWidth(1);
-//   doc.line(
-//     rightColX - 12,
-//     marginY,
-//     rightColX - 12,
-//     doc.internal.pageSize.getHeight() - marginY,
-//   );
-
-//   doc.save(`Gabriel_Ochieng_Resume_${job.company}.pdf`);
-// };
-
 import { jsPDF } from "jspdf";
+import type { TailoredResumeData } from "./applications";
 
-export const generateTailoredPDF = (tailoredData: any, job: any) => {
+type JobForPdf = { company: string };
+
+/** Builds the tailored-resume jsPDF document. Shared by the client-side download and the server-side email attachment. */
+export const buildTailoredPdfDoc = (tailoredData: TailoredResumeData, job: JobForPdf) => {
   // A4 Config (8.27" x 11.69") based on your layout settings
   const doc = new jsPDF({
     format: "a4",
@@ -329,5 +188,17 @@ export const generateTailoredPDF = (tailoredData: any, job: any) => {
     align: "right",
   });
 
+  return doc;
+};
+
+/** Client-side only: builds the PDF and triggers a browser download. */
+export const generateTailoredPDF = (tailoredData: TailoredResumeData, job: JobForPdf) => {
+  const doc = buildTailoredPdfDoc(tailoredData, job);
   doc.save(`Gabriel_Ochieng_Tailored_${job.company.replace(/\s+/g, "_")}.pdf`);
+};
+
+/** Server-side: builds the PDF and returns it as a Buffer, for emailing as an attachment. */
+export const buildTailoredPdfBuffer = (tailoredData: TailoredResumeData, job: JobForPdf): Buffer => {
+  const doc = buildTailoredPdfDoc(tailoredData, job);
+  return Buffer.from(doc.output("arraybuffer"));
 };

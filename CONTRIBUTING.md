@@ -13,7 +13,8 @@ hardcoded profile.
    file's comments for what each one does and which parts of the app use
    it. At minimum, for the dashboard to run you need the two
    `NEXT_PUBLIC_SUPABASE_*` vars and `SUPABASE_URL` / `SUPABASE_KEY`.
-4. `npm run dev` — dashboard at `http://localhost:3000/dashboard`.
+4. `npm run dev` — dashboard at `http://localhost:3000/`. (`src/app/dashboard/page.tsx`
+   is a dead stub, not the real route — don't be misled by the folder name.)
 
 ### Database
 
@@ -45,7 +46,12 @@ predate CI being added).
   `supabase-admin.ts` (server-only, service-role client — **never** import
   this from a Client Component), `filters.ts` (the `isWorldwide` geo-filter
   "bouncer"), `alert.ts` (structured failure logging + email alerts for the
-  unattended cron routes).
+  unattended cron routes), `profile.ts` (fetches the app's one hardcoded
+  resume row, used by every AI route), `applications.ts` (the Gemini calls
+  behind resume-tailoring and application-email drafting), `pdf-helper.ts`
+  (builds the tailored-resume PDF — `buildTailoredPdfDoc` for the shared
+  layout, `generateTailoredPDF` for the client-side download,
+  `buildTailoredPdfBuffer` for attaching it to an outbound email).
 - `src/services/` — client-side data access (`jobService.ts`, used by the
   dashboard via React Query).
 - `scripts/` — standalone Node scripts, each scraping one job source, run by
@@ -84,6 +90,27 @@ whether to merge two divergent data tracks) rather than a pure refactor:
 If you touch one of these, flag the inconsistency rather than quietly
 "fixing" it — changing any of the above changes what counts as a duplicate
 or what passes the filter, which is a product call, not just cleanup.
+
+## Sending real applications
+
+`POST /api/applications/draft` and `POST /api/applications/send` (wired up
+behind the "Apply" button on each job card, `src/components/ApplicationModal.tsx`)
+draft and send a real, addressed application email with a tailored resume
+PDF attached. A few things to know:
+
+- `application_email` has to be set on the job first (manually, in the
+  modal) — no scraper captures one; see the note in `.env.example`.
+- Drafting is ungated (same tier as `/api/match`/`/api/cover-letter`), but
+  **sending requires `ADMIN_PASSWORD`**, the same gate `/api/profile` uses —
+  it's the one route in this app with a real, irreversible, external effect.
+- Sending requires `APPLICATION_FROM_EMAIL` to be set to a Resend-verified
+  domain. Every other outbound email in this app uses Resend's shared
+  sandbox sender, which can only deliver to your own address — it cannot
+  reach a third-party recruiter. The send route refuses clearly if this
+  isn't configured, rather than failing silently or bouncing.
+- There's deliberately no automated web-form-filling or auto-send path.
+  ATS platforms (Greenhouse/Lever/Ashby) generally prohibit automated
+  submissions and run bot-detection; don't add one.
 
 ## Secrets
 

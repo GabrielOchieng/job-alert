@@ -1,23 +1,12 @@
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { getResumeText, ResumeMissingError } from "@/lib/profile";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
     const { jobTitle, company, jobDescription } = await req.json();
-    const supabase = getSupabaseAdmin();
-
-    // 1. Fetch Gabriel's actual resume from Supabase
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("resume_text")
-      .eq("id", "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d")
-      .single();
-
-    if (!profile?.resume_text) {
-      return NextResponse.json({ error: "Resume missing" }, { status: 400 });
-    }
+    const resumeText = await getResumeText();
 
     // 2. Define AI Prompts
     const systemPrompt = `You are the job applicant, Gabriel. Write a professional, persuasive 3-paragraph cover letter.
@@ -37,7 +26,7 @@ export async function POST(req: Request) {
                Paragraph 2: Deep dive into technical wins using React, Next.js, and AI automation to solve their specific needs. [cite: 14, 26]
                Paragraph 3: Professional closing and request for an interview.`;
 
-    const userPrompt = `RESUME: ${profile.resume_text}\n\nJOB TITLE: ${jobTitle}\n\nCOMPANY: ${company}\n\nJOB DESCRIPTION: ${jobDescription}`;
+    const userPrompt = `RESUME: ${resumeText}\n\nJOB TITLE: ${jobTitle}\n\nCOMPANY: ${company}\n\nJOB DESCRIPTION: ${jobDescription}`;
 
     // 3. Robust Execution with Manual Fallback
     let result;
@@ -71,6 +60,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ letter: result.text });
   } catch (error: any) {
+    if (error instanceof ResumeMissingError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("Cover Letter Error:", error);
     return NextResponse.json(
       { error: error.message || "Generation failed" },

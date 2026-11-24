@@ -1,24 +1,13 @@
 import { google } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { getResumeText, ResumeMissingError } from "@/lib/profile";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
     const { jobDescription } = await req.json();
-    const supabase = getSupabaseAdmin();
-
-    // 1. Fetch Gabriel's actual resume from Supabase
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("resume_text")
-      .eq("id", "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d")
-      .single();
-
-    if (!profile?.resume_text) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 400 });
-    }
+    const resumeText = await getResumeText();
 
     // 2. Define AI configuration
     const schema = z.object({
@@ -39,7 +28,7 @@ export async function POST(req: Request) {
                - Below 70: Missing core technical requirements.
                - DO NOT return 0.9 or 0.8; return 90 or 80.`;
 
-    const userPrompt = `RESUME: ${profile.resume_text}\n\nJOB DESCRIPTION: ${jobDescription}`;
+    const userPrompt = `RESUME: ${resumeText}\n\nJOB DESCRIPTION: ${jobDescription}`;
 
     // 3. Execution with Manual Fallback
     let result;
@@ -74,6 +63,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result.output);
   } catch (error: any) {
+    if (error instanceof ResumeMissingError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("Match Error:", error);
     return NextResponse.json(
       { error: error.message || "Analysis failed" },

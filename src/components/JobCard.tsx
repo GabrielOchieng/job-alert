@@ -33,9 +33,21 @@ import {
   Terminal,
   Share2,
   Trash2, // Added Trash icon
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TailorModal } from "./TailorModal";
+import { ApplicationModal } from "./ApplicationModal";
+
+interface ApplicationDraft {
+  email: { subject: string; body: string };
+  resume: {
+    optimizedSummary: string;
+    suggestedBulletPoints: string[];
+    keyKeywordsMissing: string[];
+  };
+  generatedAt: string;
+}
 
 interface Job {
   id: string;
@@ -45,6 +57,8 @@ interface Job {
   description: string;
   url: string;
   status?: string;
+  application_email?: string | null;
+  application_draft?: ApplicationDraft | null;
 }
 
 export default function JobCard({ job }: { job: Job }) {
@@ -57,6 +71,7 @@ export default function JobCard({ job }: { job: Job }) {
   const [matchData, setMatchData] = useState<any>(null);
   const [letter, setLetter] = useState("");
   const [isTailorOpen, setIsTailorOpen] = useState(false);
+  const [isApplicationOpen, setIsApplicationOpen] = useState(false);
   const [activeAction, setActiveAction] = useState<
     "analyzing" | "pitching" | "status" | "deleting" | null
   >(null);
@@ -301,6 +316,17 @@ export default function JobCard({ job }: { job: Job }) {
             Pitch
           </Button>
 
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsApplicationOpen(true)}
+            disabled={!!activeAction}
+            className="h-8 hover:bg-primary/10 text-xs font-bold uppercase tracking-tighter"
+          >
+            <Send className="mr-2 text-primary" size={12} />
+            Apply
+          </Button>
+
           {job.status !== "applied" && (
             <Button
               variant="ghost"
@@ -392,6 +418,12 @@ export default function JobCard({ job }: { job: Job }) {
         job={job}
         isOpen={isTailorOpen}
         onOpenChange={setIsTailorOpen}
+      />
+
+      <ApplicationModal
+        job={job}
+        isOpen={isApplicationOpen}
+        onOpenChange={setIsApplicationOpen}
       />
     </Card>
   );

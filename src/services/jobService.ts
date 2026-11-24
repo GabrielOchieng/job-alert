@@ -73,4 +73,15 @@ export const jobService = {
     if (error) throw error;
     return true;
   },
+
+  async updateApplicationEmail(jobId: string, applicationEmail: string) {
+    const client = getSupabase();
+    const { error } = await client
+      .from("jobs")
+      .update({ application_email: applicationEmail })
+      .eq("id", jobId);
+
+    if (error) throw error;
+    return true;
+  },
 };
