@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        # Non-blocking for now: the repo currently has ~40 pre-existing
+        # lint errors (mostly `no-explicit-any`) unrelated to any single
+        # change. Flip this to blocking once that backlog is cleared.
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        # A few routes construct SDK clients (Resend, Firecrawl) at module
+        # load time, which makes `next build` require their API keys to be
+        # present even though this build never calls out to those services.
+        # Dummy values are enough to satisfy the constructors.
+        env:
+          RESEND_API_KEY: ci-dummy-key
+          FIRECRAWL_API_KEY: ci-dummy-key
+        run: npm run build
