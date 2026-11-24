@@ -81,16 +81,8 @@
 
 // src/app/api/profile/route.ts
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { isValidAdminPassword } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "crypto";
-
-function isValidAdminPassword(provided: string, expected: string): boolean {
-  const providedBuf = Buffer.from(provided);
-  const expectedBuf = Buffer.from(expected);
-  // timingSafeEqual throws if buffers differ in length, so pad to match first.
-  if (providedBuf.length !== expectedBuf.length) return false;
-  return timingSafeEqual(providedBuf, expectedBuf);
-}
 
 export async function POST(req: Request) {
   try {

@@ -29,6 +29,9 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      - name: Test
+        run: npm test
+
       - name: Build
         # A few routes construct SDK clients (Resend, Firecrawl) at module
         # load time, which makes `next build` require their API keys to be
