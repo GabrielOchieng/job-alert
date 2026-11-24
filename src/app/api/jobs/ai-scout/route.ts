@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import FirecrawlApp from "@mendable/firecrawl-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { filterNewJobs } from "@/lib/supabase";
+import { filterNewJobs } from "@/lib/supabase-admin";
 import { Resend } from "resend"; // 1. Import Resend
 
 export const maxDuration = 60;

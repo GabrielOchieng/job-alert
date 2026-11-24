@@ -102,7 +102,7 @@
 
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { filterNewJobs } from "@/lib/supabase";
+import { filterNewJobs } from "@/lib/supabase-admin";
 import { isWorldwide } from "@/lib/filters"; // Import the bouncer
 
 const resend = new Resend(process.env.RESEND_API_KEY);

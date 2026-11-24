@@ -1,12 +1,12 @@
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
     const { jobTitle, company, jobDescription } = await req.json();
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // 1. Fetch Gabriel's actual resume from Supabase
     const { data: profile } = await supabase

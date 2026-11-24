@@ -80,8 +80,17 @@
 // }
 
 // src/app/api/profile/route.ts
-import { getSupabase } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
+
+function isValidAdminPassword(provided: string, expected: string): boolean {
+  const providedBuf = Buffer.from(provided);
+  const expectedBuf = Buffer.from(expected);
+  // timingSafeEqual throws if buffers differ in length, so pad to match first.
+  if (providedBuf.length !== expectedBuf.length) return false;
+  return timingSafeEqual(providedBuf, expectedBuf);
+}
 
 export async function POST(req: Request) {
   try {
@@ -89,9 +98,14 @@ export async function POST(req: Request) {
 
     // 1. SECURITY CHECK: Compare against the secret Server-Side Environment Variable
     // This variable is set in Vercel and is NEVER sent to the browser.
+    // Uses a constant-time comparison so response timing can't leak the password.
     const correctPassword = process.env.ADMIN_PASSWORD;
 
-    if (!adminPassword || adminPassword !== correctPassword) {
+    if (
+      !adminPassword ||
+      !correctPassword ||
+      !isValidAdminPassword(adminPassword, correctPassword)
+    ) {
       return NextResponse.json(
         {
           error: "Unauthorized Access",
@@ -102,7 +116,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // 2. AUTHORIZED: Perform the Upsert
     const { error } = await supabase.from("profiles").upsert(
