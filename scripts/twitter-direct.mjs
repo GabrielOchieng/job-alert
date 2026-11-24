@@ -1,17 +1,12 @@
 import FirecrawlApp from "@mendable/firecrawl-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend";
+import { dedupeAndInsertJobs } from "./lib/db.mjs";
+import { sendNewLeadsEmail } from "./lib/notify.mjs";
 import dotenv from "dotenv";
 dotenv.config();
 
 const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY,
-);
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // --- HELPER: AI FALLBACK LOGIC ---
 async function generateWithFallback(prompt, content) {
@@ -64,13 +59,13 @@ async function runPivotScout() {
     const prompt = `
       CONTEXT: Today is ${today}.
       Analyze this Markdown from Google Search results of X/Twitter.
-      
+
       STRICT EXTRACTION RULES:
-      1. URL: Find the direct link to the TWEET (must contain /status/) or the JOB BOARD (lever.co, greenhouse.io, ashbyhq.com). 
+      1. URL: Find the direct link to the TWEET (must contain /status/) or the JOB BOARD (lever.co, greenhouse.io, ashbyhq.com).
       2. REJECT: Do not extract links that go to a user profile (e.g., x.com/user).
       3. TITLE: Summarize the role (e.g., "Senior Frontend Engineer").
       4. COMPANY: Use the @handle or Name mentioned as the source.
-      
+
       JSON STRUCTURE: [{"title": "...", "company": "...", "url": "..."}]
       Return ONLY a raw JSON array. If nothing found, return [].
     `;
@@ -90,40 +85,24 @@ async function runPivotScout() {
     console.log(`📡 Signals Decoded: ${jobs.length}`);
     if (jobs.length === 0) return;
 
-    const newLeads = [];
-    for (const job of jobs) {
-      const { data: existing } = await supabase
-        .from("jobs")
-        .select("url")
-        .eq("url", job.url)
-        .maybeSingle();
+    const candidateJobs = jobs.map((job) => ({
+      ...job,
+      location: "Remote (X-Signal)",
+      description: `Intelligence intercepted via X Deep-Pivot for ${job.title}`,
+      status: "new",
+    }));
 
-      if (!existing) {
-        const { data: inserted, error: insertError } = await supabase
-          .from("jobs")
-          .insert([
-            {
-              ...job,
-              location: "Remote (X-Signal)",
-              description: `Intelligence intercepted via X Deep-Pivot for ${job.title}`,
-              status: "new",
-            },
-          ])
-          .select()
-          .single();
-
-        if (inserted) newLeads.push(inserted);
-      }
-    }
+    const newLeads = await dedupeAndInsertJobs(candidateJobs);
 
     if (newLeads.length > 0) {
-      const { error } = await resend.emails.send({
+      const result = await sendNewLeadsEmail({
         from: "CipherHunt <onboarding@resend.dev>",
         to: process.env.MY_EMAIL,
         subject: `🎯 X-Signal: ${newLeads.length} Direct Intercepts Found`,
-        html: `... (Your Existing HTML) ...`, // Keep your existing HTML here
+        jobs: newLeads,
+        renderHtml: () => `... (Your Existing HTML) ...`, // Keep your existing HTML here
       });
-      if (!error) console.log("📨 EMAIL SENT!");
+      if (result.sent) console.log("📨 EMAIL SENT!");
     }
   } catch (err) {
     console.error("❌ CRITICAL TRANSMISSION FAILURE:", err.message);

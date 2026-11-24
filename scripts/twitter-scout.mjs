@@ -1,7 +1,7 @@
 import FirecrawlApp from "@mendable/firecrawl-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend";
+import { dedupeAndInsertJobs } from "./lib/db.mjs";
+import { sendNewLeadsEmail } from "./lib/notify.mjs";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -9,14 +9,13 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
+function renderHtml(jobs) {
+  return `<h2>New Leads Found</h2>${jobs.map((j) => `<p>${j.title} @ ${j.company}</p>`).join("")}`;
+}
+
 async function runTwitterScout() {
   const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_KEY,
-  );
-  const resend = new Resend(process.env.RESEND_API_KEY);
 
   // Broaden the date slightly to ensure we find something new
   const targetUrl =
@@ -48,54 +47,30 @@ async function runTwitterScout() {
 
     console.log(`📡 AI found ${jobs.length} signals in the raw feed.`);
 
-    const newLeads = [];
-    for (const job of jobs) {
-      // DEBUG LOG: See what we are checking
-      console.log(`🔍 Checking DB for: ${job.url}`);
+    // FIX: Adding the required columns so the insert doesn't fail
+    const candidateJobs = jobs.map((job) => ({
+      ...job,
+      location: "Remote (X-Signal)",
+      description: `Intercepted stealth lead for ${job.title}`,
+      status: "new",
+    }));
 
-      const { data: existing } = await supabase
-        .from("jobs")
-        .select("url")
-        .eq("url", job.url)
-        .maybeSingle();
-
-      if (!existing) {
-        console.log(`➕ NEW SIGNAL DETECTED: ${job.title}`);
-
-        // FIX: Adding the required columns so the insert doesn't fail
-        const { data: inserted, error: insertError } = await supabase
-          .from("jobs")
-          .insert([
-            {
-              ...job,
-              location: "Remote (X-Signal)",
-              description: `Intercepted stealth lead for ${job.title}`,
-              status: "new",
-            },
-          ])
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error("❌ INSERT FAILED:", insertError.message);
-        } else if (inserted) {
-          newLeads.push(inserted);
-        }
-      } else {
-        console.log("⏭️ Already indexed. Skipping.");
-      }
+    const newLeads = await dedupeAndInsertJobs(candidateJobs);
+    for (const lead of newLeads) {
+      console.log(`➕ NEW SIGNAL DETECTED: ${lead.title}`);
     }
 
     if (newLeads.length > 0) {
       console.log(`🚀 Sending email for ${newLeads.length} new leads!`);
-      const { error: mailError } = await resend.emails.send({
+      const mailResult = await sendNewLeadsEmail({
         from: "CipherHunt-X <onboarding@resend.dev>",
         to: process.env.MY_EMAIL,
         subject: `🐦 X-Signal: ${newLeads.length} New Leads`,
-        html: `<h2>New Leads Found</h2>${newLeads.map((j) => `<p>${j.title} @ ${j.company}</p>`).join("")}`,
+        jobs: newLeads,
+        renderHtml,
       });
 
-      if (mailError) console.error("❌ MAIL ERROR:", mailError.message);
+      if (!mailResult.sent) console.error("❌ MAIL ERROR:", mailResult.reason);
       else console.log("📨 Email sent successfully!");
     } else {
       console.log("ℹ️ No brand new leads found this time.");

@@ -1,19 +1,14 @@
 // scripts/ai-scout.mjs
 import FirecrawlApp from "@mendable/firecrawl-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend";
+import { dedupeAndInsertJobs } from "./lib/db.mjs";
+import { sendNewLeadsEmail } from "./lib/notify.mjs";
 
 // Note: GitHub Actions injects env variables directly,
 // so we don't strictly need dotenv.config() here.
 
 const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-);
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const SOURCES = [
   "https://weworkremotely.com/categories/remote-front-end-programming-jobs",
@@ -35,18 +30,12 @@ async function run() {
     if (!scrapeResult.markdown)
       throw new Error("Scrape failed to return content.");
 
-    // const prompt = `Extract a JSON list of jobs from this markdown.
-    // ONLY 100% WORLDWIDE REMOTE Software Engineering roles.
-    // Format: [{"title": "...", "company": "...", "url": "..."}]
-
-    // Content: ${scrapeResult.markdown}`;
-
     const prompt = `
-  Analyze this Markdown from a job board. 
+  Analyze this Markdown from a job board.
   Extract a JSON list of jobs: [{"title": "string", "company": "string", "url": "string"}]
 
   CRITICAL RULES:
-  1. ONLY extract jobs that were posted "Today", "Yesterday", or "1 day ago". 
+  1. ONLY extract jobs that were posted "Today", "Yesterday", or "1 day ago".
   2. If the markdown shows a date like "24 days ago" or "March 10", IGNORE IT.
   3. ONLY keep 100% WORLDWIDE REMOTE Software Engineering roles.
   4. REJECT "US Only", "Europe Only", or "UK Only".
@@ -82,53 +71,17 @@ async function run() {
     const jobs = JSON.parse(aiResponseText.replace(/```json|```/g, "").trim());
     console.log(`Found ${jobs.length} potential leads. Checking Supabase...`);
 
-    const newLeads = [];
-    for (const job of jobs) {
-      // Check if URL exists
-      const { data: existing } = await supabase
-        .from("jobs")
-        .select("url")
-        .eq("url", job.url)
-        .maybeSingle();
-
-      if (!existing) {
-        const { data: inserted, error: insertError } = await supabase
-          .from("jobs")
-          .insert([job])
-          .select()
-          .single();
-
-        if (inserted) {
-          newLeads.push(inserted);
-        } else if (insertError) {
-          console.error(`Insert Error for ${job.title}:`, insertError.message);
-        }
-      }
-    }
+    const newLeads = await dedupeAndInsertJobs(jobs);
 
     // 4. EMAIL RESULTS
     if (newLeads.length > 0) {
-      await resend.emails.send({
+      await sendNewLeadsEmail({
         from: "JobBot <onboarding@resend.dev>",
         to: process.env.MY_EMAIL,
         subject: `✨ AI Scout: ${newLeads.length} New Global Leads`,
-        html: `
-          <div style="font-family: sans-serif;">
-            <h2>Fresh Worldwide Leads</h2>
-            <p>Scraped from: ${targetUrl}</p>
-            <hr />
-            ${newLeads
-              .map(
-                (j) => `
-              <div style="margin-bottom: 15px;">
-                <strong>${j.title}</strong> @ ${j.company}<br>
-                <a href="${j.url}">View Position →</a>
-              </div>
-            `,
-              )
-              .join("")}
-          </div>
-        `,
+        heading: "Fresh Worldwide Leads",
+        note: `Scraped from: ${targetUrl}`,
+        jobs: newLeads,
       });
       console.log(`✅ Success! ${newLeads.length} new jobs saved and emailed.`);
     } else {
